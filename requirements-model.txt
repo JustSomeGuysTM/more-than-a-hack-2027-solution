@@ -1,0 +1,17 @@
+# Everything the model in src/ needs, pinned -- SUBMISSION.md asks for a repository that
+# regenerates the same file, and that starts with the same library versions.
+#
+# Builds on the starter requirements (numpy, pandas, kloppy, matplotlib, notebook), pinning the
+# ones they leave open. This is what the Docker image installs.
+-r requirements-starter.txt
+
+numpy==1.26.4
+pandas==2.2.3
+scipy==1.13.1
+scikit-learn==1.5.2
+matplotlib==3.9.2
+
+boto3==1.35.36
+python-dotenv==1.0.1
+
+pytest==8.3.3
