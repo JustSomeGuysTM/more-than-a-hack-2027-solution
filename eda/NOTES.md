@@ -264,3 +264,12 @@ team on alive frames it covers, v2 elsewhere. Public window (sanity): **spellF1 
 0.716, 24 spells** vs v2 0.521 / 0.698. No training on our side yet; goalkeeper identity not
 provided (model expects it). `src/commentary_model.py`: stoppage classifier trained on
 SoccerNet-Echoes transcripts + SoccerNet labels (other games), applied through the alignment.
+
+## Commentary stoppage model (`src/commentary_model.py`, 2026-10-27)
+TF-IDF + logistic regression on SoccerNet-Echoes English transcripts (330 matches with labels,
+352k 10-s windows) vs SoccerNet stoppage labels within a lag window. Held-out games: AUC 0.565,
+AP 0.51 (base 0.44); top terms are the right ones (throw in, corner, offside, foul, into touch).
+On BAR-ATH through the clock alignment it covers 72% of frames; public window P(D | p >= 0.5) =
+0.29 vs base 0.20 (keyword rule was 0.23). Weak but real. Not in v2/v3 (no such feature on DFL);
+usable only as extra D evidence at decode time with a hand-set weight -> parked, documented.
+Output: `eda/out/commentary_stoppage.npz` (per-frame probability).
