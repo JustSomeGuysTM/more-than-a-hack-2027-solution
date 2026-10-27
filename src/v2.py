@@ -3,7 +3,7 @@ ball degraded to BAR-ATH visibility) -> log P(H/A/D) as Viterbi emissions -> swi
 
     .venv/bin/python src/v2.py --cv          # leave-one-match-out on DFL: honest spellF1, picks temperature/switch
     .venv/bin/python src/v2.py --train       # fit on all 7 DFL matches -> src/v2_model.pkl
-    .venv/bin/python src/v2.py               # BAR-ATH -> evaluation/results/v2.csv (+ public-window sanity score)
+    .venv/bin/python src/v2.py               # BAR-ATH -> evaluation/results/v3.csv (+ public-window sanity score)
 
 Training data is other games only (RULES.md); features are slot-agnostic (src/features.py); the
 home/away mirror doubles the data and removes any home bias.
@@ -16,7 +16,7 @@ from src.possession import viterbi, score, LAB
 from src.external import degrade_ball
 IDS = ["J03WMX", "J03WN1", "J03WOH", "J03WOY", "J03WPY", "J03WQQ", "J03WR9"]
 MODEL = os.path.join(ROOT, "src/v2_model.pkl")
-V = dict(temp=1.0, switch=10.0, switch_d=10.0)      # DFL leave-one-out: spellF1 0.50, macroF1 0.89 (2026-10-26). emissions are log-probs (~[-7, 0]); penalties are in the same units
+V = dict(temp=1.0, switch=10.0, switch_d=10.0)      # DFL leave-one-out: v2 spellF1 0.50 / macroF1 0.89; v3 (+since-touch features) 0.56 / 0.91 (2026-10-26). emissions are log-probs (~[-7, 0]); penalties are in the same units
 
 def dfl_game(mid, seed):
     z = np.load(os.path.join(ROOT, f"data_raw/external/dfl_{mid}.npz")); d = {q: z[q] for q in z.files}; d["fps"] = 25
@@ -70,5 +70,5 @@ def run_barath(out):
     print("BAR-ATH public window (sanity only):", score(gt, lab)); print("wrote", out)
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("--cv", action="store_true"); ap.add_argument("--train", action="store_true"); ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/v2.csv"))
+    ap = argparse.ArgumentParser(); ap.add_argument("--cv", action="store_true"); ap.add_argument("--train", action="store_true"); ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/v3.csv"))
     a = ap.parse_args(); cv() if a.cv else train() if a.train else run_barath(a.out)

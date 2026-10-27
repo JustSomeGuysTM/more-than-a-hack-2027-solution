@@ -1,6 +1,6 @@
 {
  "1": {
-  "offset": -286.5,
+  "offset": -286.86,
   "n": 1323,
   "inliers": 1201,
   "resid_p95": 1.0,
@@ -11,10 +11,13 @@
   "clock_range": [
    21,
    2690
-  ]
+  ],
+  "offset_clock": -286.5,
+  "ball_refined_shift_frames": -9,
+  "ball_median_disagreement_m": 0.82
  },
  "2": {
-  "offset": -773.5,
+  "offset": -772.9,
   "n": 1294,
   "inliers": 1211,
   "resid_p95": 1.0,
@@ -25,6 +28,9 @@
   "clock_range": [
    2719,
    5771
-  ]
+  ],
+  "offset_clock": -773.5,
+  "ball_refined_shift_frames": 15,
+  "ball_median_disagreement_m": 0.86
  }
 }

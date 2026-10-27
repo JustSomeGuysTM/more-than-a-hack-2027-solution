@@ -142,8 +142,15 @@ the rest are replays/cutaways/pre-match). Clock runs in real time, so each half 
 
 | half | clock = broadcast_sec + | tactical frame = | broadcast range with clock |
 |---|---|---|---|
-| 1 | -286.5 s | 11185 + 25·clock | 308–2978 s |
-| 2 | -773.5 s | 113742 + 25·(clock-2700) | 3492–6544 s |
+| 1 | -286.86 s | 11185 + 25·clock | 308–2978 s |
+| 2 | -772.90 s | 113742 + 25·(clock-2700) | 3492–6544 s |
+
+Refined to the frame (2026-10-26) by minimising the broadcast-ATD vs tactical-ATD ball
+disagreement: clock-only offsets (-286.5 / -773.5) gave 2.4 / 4.0 m median disagreement, the
+refined ones 0.82 / 0.86 m. Both values are kept in `eda/align.json` (`offset_clock`, `offset`).
+
+Broadcast ball fusion was tried and dropped: the broadcast ATD carries a pitch-coordinate ball on
+only 26% of graded frames and adds just 2.6% of frames the tactical feed does not already see.
 
 91–94% of reads agree with the offset to within 1 s; the rest are OCR misreads. Validated
 independently: broadcast-ATD vs tactical-ATD player-centroid distance is minimised within ±1–2 s of
@@ -205,3 +212,29 @@ Frame accuracy on held-out DFL is 0.90; the DFL->Metrica gap (0.89 -> 0.70 macro
 derived Metrica labels, partly domain shift. Next: whistle + commentary cues as extra features
 (via `eda.align.b2t`), smart-tagging windows as a feature, bigger context windows, and a
 transition model that knows a possession starts with a controlled touch.
+
+## Audio cues: negative result (`src/audio_cues.py`, 2026-10-26)
+Whistle detector on the Demucs crowd stem (3-4.5 kHz tonal peak, robust z > 6, 227 onsets) and
+commentary restart words (throw-in / corner / free kick / foul / offside / penalty / goal, word
+timestamps mapped with `eda.align.b2t`). Checked against the smart-tagging SET PIECES windows
+(no labels involved): P(set-piece window | whistle) 0.26 vs base 0.22, restart words 0.27. In the
+public window P(D | whistle) is 0.14 vs base 0.20 -- the stadium crowd whistles constantly, so the
+detector finds fans, not the referee. Not used in v3. Would need a referee-whistle classifier
+trained on other games' audio (e.g. SoccerNet-Echoes games) to be worth revisiting.
+
+## Possession v3 (`src/v2.py` + 8 "since/until" features, 2026-10-26)
+Adds seconds since/until the last home touch, away touch, ball off pitch and ball speed jump
+(46 features). ±5 s rolling context was also tried: no gain, dropped.
+
+| | spellF1 | macroF1 | spells (gt) |
+|---|---|---|---|
+| DFL leave-one-match-out, v2 -> **v3** | 0.50 -> **0.56** | 0.89 -> **0.91** | 317 -> 316 (437) |
+| Metrica 1+2 degraded (held out), v2 -> **v3** | 0.48 -> **0.52** | 0.70 -> **0.71** | 342 -> 320 (346) |
+| BAR-ATH public 5 min, v2 -> v3 (sanity only) | 0.52 -> 0.39 | 0.70 -> 0.69 | 16 -> 27 (17) |
+
+Split result: every external check improves, the public window gets worse and v3 fragments
+BAR-ATH into 27 spells. 17 possessions is far too few to decide, but the fragmentation is a real
+hint that the touch features behave differently on our tracklets (46 slots, ~20.5 tracked, ID
+switches) than on DFL's clean 22 tracks. **v2 stays the submission candidate** until the external
+validation also degrades the *player* tracking to BAR-ATH-like quality (drop ~7% of player
+observations, add ID churn) -- that is the honest way to pick between them.

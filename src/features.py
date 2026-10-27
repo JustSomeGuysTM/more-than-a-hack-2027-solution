@@ -40,8 +40,14 @@ def features(d, pitch, gap=50):
     out["ntracked"] = n.astype(float); out["spread"] = np.sqrt(np.nansum(np.where(ok, ((pl - cen[:, None]) ** 2).sum(2), 0), 1) / n).clip(0, 50)
     out["dcen"] = np.linalg.norm(bc - cen, axis=1).clip(0, 60)
     out["pspeed"] = np.r_[0, np.nanmean(np.linalg.norm(np.diff(pl, axis=0), axis=2), 1)] * fps   # mean player speed (walking = dead)
+    def since(ev):                                                            # seconds since the event last happened (capped 10 s), and until it next happens
+        last = np.maximum.accumulate(np.where(ev, idx, -1)); nx = np.minimum.accumulate(np.where(ev, idx, F)[::-1])[::-1]
+        return np.where(last >= 0, idx - last, 250).clip(0, 250) / 25.0, np.where(nx < F, nx - idx, 250).clip(0, 250) / 25.0
+    for nm in ("H", "A"): out[f"sinceT{nm}"], out[f"untilT{nm}"] = since(known & (out[f"d1{nm}"] < 1.5))     # touch = that team within 1.5 m of a seen ball
+    out["sinceOff"], out["untilOff"] = since(out["off"] > 0)
+    kick = known & (np.abs(np.diff(np.r_[speed[0], speed])) > 4); out["sinceKick"], out["untilKick"] = since(kick)   # speed jump > 4 m/s per frame
     base = dict(out)
-    for half in (12, 50):                                                     # ±0.5 s and ±2 s context
+    for half in (12, 50):                                                     # ±0.5 s and ±2 s context (±5 s tried: no gain on DFL CV)
         for k in ("d1H", "d1A", "ddiff", "speed", "known", "pspeed", "n3H", "n3A"): out[f"{k}_r{half}"] = roll(base[k], half)
     names = list(out); X = np.column_stack([out[k] for k in names]).astype(np.float32)
     return X, names
