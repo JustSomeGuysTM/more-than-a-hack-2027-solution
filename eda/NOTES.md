@@ -330,3 +330,31 @@ Also: DFL CV with ball visibility 0.78 instead of 0.57 for the HGB: 0.558 / 0.91
 PathCRF with the BiGRU's dead labels instead of v2's (`pathcrf_run.py --alive seq.csv`, absolute
 paths, pathcrf venv): public window 0.587 / 0.701, 28 spells vs 0.615 / 0.716, 24 spells with v2.
 Within noise; v2 stays the dead-ball source for PathCRF.
+
+## PFF FC World Cup 2022 (`src/pff.py`, 2026-10-27)
+64 matches, tracking 29.97 fps (11 players per team on every frame, ball missing on 26% of frames,
+mostly dead-ball) + event data, public, downloaded from PFF's Drive. Converter: 15 s per match ->
+`data_raw/external/pff_<gid>.npz` at 25 fps (same dict as the DFL loader) and
+`~/pathcrf/data/pff/tracking_processed/<gid>.parquet`. Labels are algorithmic: D from the period
+start to the first on-ball event, from an OUT / foul / goal event to the next on-ball event, after
+END; else the team of the last on-ball (OTB) event. 35% dead in 93-125 spells of 16-23 s (DFL: 42%,
+92-103 spells of 23-27 s). Label quality vs DFL: on clear-possession frames (ball within 1.5 m of a
+player) the label matches the nearest player's team on 89% (DFL 92%); half of the frames the rule
+calls dead look like live play (ball visible, players at 2.3 m/s), so the dead rule over-reaches.
+
+DFL-trained models on PFF 10502 (its labels as truth): HGB v3 0.27 / 0.67 (frame acc 0.66), BiGRU
+0.36-0.38 / 0.73 (0.74), PathCRF checkpoint 0.25 / 0.80 with 1019 spells (gt 394).
+
+**Training the HGB on PFF is a negative result.** Held-out DFL match, HGB v3 features, PFF every 5th
+frame + mirror:
+
+| train | J03WR9 spellF1 / macroF1 | J03WMX |
+|---|---|---|
+| 6 DFL | 0.562 / 0.925 | 0.547 / 0.917 |
+| 6 DFL + 64 PFF | 0.545 / 0.917 | 0.504 / 0.907 |
+| 64 PFF only | 0.368 / 0.766 (frame acc 0.78) | 0.355 / 0.794 (0.80) |
+
+The possession definition behind my PFF labels is too far from DFL's (and so from the organisers')
+to help; a better rule would need to be tuned against DFL. Kept for PathCRF, which learns from the
+on-ball player ids (PFF's reliable part) inside alive episodes: `pod/vast.sh` trains DFL-only and
+DFL+PFF leave-one-out folds on a rented GPU and the two get compared on DFL and on our match.
