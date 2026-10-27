@@ -316,3 +316,14 @@ detector's precision is not good enough to feed the ball features; same verdict 
 broadcast-ball fusion. Kept: `src/ball_fuse.py` (support filter, `--source tactical_fused` on
 `src/v2.py` and `src/pathcrf_io.py`), weights and detections in the bucket, for anyone who wants
 to retrain the detector with more data (SoccerNet Tracking) and try again.
+
+## BiGRU sequence model (`src/seq.py`, 2026-10-27)
+BiGRU (hidden 64, 30-s windows) over the 46 v3 per-frame features, trained on the 7 DFL matches
+(ball degraded to 0.57, H/A mirrored), 8 epochs, log-softmax as Viterbi emissions. Leave-one-
+match-out on DFL (pod, CPU, ~3 h): **spellF1 0.603 / macroF1 0.914** at switch 3 (0.598 at 6,
+0.590 at 10), vs HGB v3 0.56 / 0.91 and v2 0.50 / 0.89. Frame accuracy 0.92-0.94 per match.
+BAR-ATH public window (sanity only): switch 3 -> 0.474 / 0.674, 21 spells; switch 6 or 10 ->
+0.500 / 0.669, 19 spells (GT 17). Unlike v3 it does not fragment our match. Model committed as
+`src/seq_model.pt`; `--train` regenerates it in ~25 min on the laptop. Result files
+`evaluation/results/seq.csv` (switch 3, the DFL-chosen value) and `seq_sw{6,10}.csv`.
+Also: DFL CV with ball visibility 0.78 instead of 0.57 for the HGB: 0.558 / 0.910, i.e. unchanged.

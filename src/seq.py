@@ -15,7 +15,7 @@ from src.v2 import IDS, dfl_game, mirror
 import torch, torch.nn as nn
 MODEL = os.path.join(ROOT, "src/seq_model.pt"); WIN = 750; HID = 64   # 30 s windows at 25 fps
 DEV = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-S = dict(temp=1.0, switch=10.0, switch_d=10.0)
+S = dict(temp=1.0, switch=3.0, switch_d=3.0)   # DFL leave-one-out, 8 epochs (pod, 2026-10-27): switch 3 -> spellF1 0.603 / macroF1 0.914, 6 -> 0.598, 10 -> 0.590, 15 -> 0.577
 
 class Net(nn.Module):
     def __init__(self, n_in):
@@ -68,16 +68,16 @@ def train(epochs):
     games = [dfl_game(m, k) for k, m in enumerate(IDS)]; _, names = features(games[0], (105.0, 68.0)); net = fit(games, epochs, names)
     torch.save({"state": net.state_dict(), "names": names}, MODEL); print("->", MODEL)
 
-def run_barath(out):
+def run_barath(out, switch=S["switch"]):
     import pandas as pd; from eda.atd import load; from games import GAMES, GAME
     m = torch.load(MODEL, map_location="cpu"); d = load("tactical"); d["fps"] = 25; F = len(d["ball"])
     X, names = features(d, GAMES[GAME]["pitch"]); assert names == m["names"]; net = Net(len(names)).to(DEV); net.load_state_dict(m["state"])
     lp = logp(net, X); alive = np.zeros(F, bool); alive[11185:90652] = True; alive[113742:190198] = True; lp[~alive, :2] = -20
-    lab = decode(lp); pd.DataFrame({"frame": np.arange(F), "label": lab}).to_csv(out, index=False)
+    lab = decode(lp, dict(S, switch=switch, switch_d=switch)); pd.DataFrame({"frame": np.arange(F), "label": lab}).to_csv(out, index=False)
     gt = pd.read_csv(os.path.join(ROOT, "evaluation/gt/BAR-ATH_possession_gt_public.csv"))["label"].values
     print("BAR-ATH public window (sanity only):", score(gt, lab)); print("wrote", out)
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--cv", action="store_true"); ap.add_argument("--train", action="store_true"); ap.add_argument("--epochs", type=int, default=8)
-    ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/seq.csv")); a = ap.parse_args()
-    cv(a.epochs) if a.cv else train(a.epochs) if a.train else run_barath(a.out)
+    ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/seq.csv")); ap.add_argument("--switch", type=float, default=S["switch"]); a = ap.parse_args()
+    cv(a.epochs) if a.cv else train(a.epochs) if a.train else run_barath(a.out, a.switch)
