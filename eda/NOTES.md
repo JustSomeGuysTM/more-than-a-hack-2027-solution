@@ -327,3 +327,6 @@ BAR-ATH public window (sanity only): switch 3 -> 0.474 / 0.674, 21 spells; switc
 `src/seq_model.pt`; `--train` regenerates it in ~25 min on the laptop. Result files
 `evaluation/results/seq.csv` (switch 3, the DFL-chosen value) and `seq_sw{6,10}.csv`.
 Also: DFL CV with ball visibility 0.78 instead of 0.57 for the HGB: 0.558 / 0.910, i.e. unchanged.
+PathCRF with the BiGRU's dead labels instead of v2's (`pathcrf_run.py --alive seq.csv`, absolute
+paths, pathcrf venv): public window 0.587 / 0.701, 28 spells vs 0.615 / 0.716, 24 spells with v2.
+Within noise; v2 stays the dead-ball source for PathCRF.
