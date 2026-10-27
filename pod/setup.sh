@@ -16,7 +16,7 @@ for m in ["J03WMX","J03WN1","J03WOH","J03WOY","J03WPY","J03WQQ","J03WR9"]:
     d = dfl(m); np.savez_compressed(f"data_raw/external/dfl_{m}.npz", players=d["players"], ball=d["ball"], team=d["team"], labels=d["labels"], period=d["period"]); print(m, d["players"].shape)
 PY
 # PathCRF env + DFL raw XML linked into its layout + preprocessing
-cd ~/pathcrf && uv venv -q --python 3.11 .venv && uv pip install -q --python .venv/bin/python torch --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple numpy pandas tqdm scipy scikit-learn matplotlib rdp pyarrow kloppy
+cd ~/pathcrf && uv venv -q --python 3.11 .venv && uv pip install -q --python .venv/bin/python torch --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple numpy pandas tqdm scipy scikit-learn matplotlib rdp pyarrow kloppy torch_geometric
 D=$(~/mtah2027/.venv/bin/python -c "from floodlight.settings import DATA_DIR; print(DATA_DIR)")/idsse
 mkdir -p data/sportec/metadata data/sportec/event data/sportec/tracking
 ln -sf $D/DFL_02_01_matchinformation_*.xml data/sportec/metadata/; ln -sf $D/DFL_03_02_events_raw_*.xml data/sportec/event/; ln -sf $D/DFL_04_03_positions_raw_observed_*.xml data/sportec/tracking/
