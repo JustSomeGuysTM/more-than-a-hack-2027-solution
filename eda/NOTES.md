@@ -291,3 +291,28 @@ visibility from 59% to ~78%. Inference over the whole match ≈ 2.5 h on the lap
 of 640 px per frame. Weights `src/ball_yolov8n.pt`; detections `eda/out/ball/detections.npz` and
 bucket `derived/ball_detections.npz`. Next: re-run v2 / PathCRF stitching on the fused ball and
 retrain v2 with DFL ball degraded to ~78% instead of 57%.
+
+## Ball fusion result (2026-10-27): negative, parked
+Full-match inference: 167,896 detections (2 h 23 min, MPS). Against the ATD ball on frames that
+have one, gross errors are common: >5 m off for 42% of detections at conf 0.25-0.4, 24% at
+0.6-0.8, 7% above 0.8. A temporal-support filter (`ball_fuse.support`: neighbours within ±5
+frames that lie within 1.5 m/frame) separates real tracks from jumps, but even 10/10-consistent
+detections are >5 m off 12% of the time, and 80% of fills on ATD-missing frames sit in long
+gaps (dead-ball stretches) with no ATD ball within 2 s to check against.
+
+Public window (sanity only; it already has an ATD ball on 88% of frames, fills touch 7%):
+
+| ball | DFL train visibility | spellF1 | macroF1 | D frames predicted (GT 1469) |
+|---|---|---|---|---|
+| ATD only (v3) | 0.57 | 0.391 | 0.686 | 466 |
+| ATD only | 0.78 | 0.400 | 0.676 | – |
+| fused, conf 0.25 | 0.57 | 0.400 | 0.602 | 76 |
+| fused, conf 0.25 | 0.78 | 0.372 | 0.561 | – |
+| fused, conf 0.5 + support 10/10 | 0.57 | 0.373 | 0.656 | – |
+
+Fills land on dead-ball frames (17% of GT-dead frames get one) and turn D into H/A; the dead
+class collapses. Training visibility is irrelevant (0.57 vs 0.78 within noise). Conclusion: the
+detector's precision is not good enough to feed the ball features; same verdict as the
+broadcast-ball fusion. Kept: `src/ball_fuse.py` (support filter, `--source tactical_fused` on
+`src/v2.py` and `src/pathcrf_io.py`), weights and detections in the bucket, for anyone who wants
+to retrain the detector with more data (SoccerNet Tracking) and try again.

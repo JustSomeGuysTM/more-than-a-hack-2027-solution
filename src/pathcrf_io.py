@@ -39,8 +39,8 @@ def interp_gaps(T, max_gap):
     for k in range(T.shape[1]): T[:, k] = fill_ball(T[:, k], max_gap)
     return T
 
-def main(alive_csv):
-    d = load("tactical"); P, team, B = d["players"][:, :, :2], d["team"], d["ball"][:, :2]; F = len(P)
+def main(alive_csv, source="tactical"):
+    d = load(source); P, team, B = d["players"][:, :, :2], d["team"], d["ball"][:, :2]; F = len(P)
     lab = pd.read_csv(alive_csv)["label"].values; alive = np.zeros(F, bool)
     for h, (a, b) in HALVES.items(): alive[a:b] = lab[a:b] != "D"
     tracks = {"home": interp_gaps(stitch(P, np.flatnonzero(team == 0)), 50), "away": interp_gaps(stitch(P, np.flatnonzero(team == 1)), 50)}
@@ -74,4 +74,4 @@ def main(alive_csv):
         n = np.isfinite(df[[f"{side}_{k}_x" for k in range(N_TRACK)]].values).sum(1); print(f"{side}: players per alive frame mean {n[al].mean():.1f}, p10 {np.percentile(n[al], 10):.0f}")
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("--alive", default=os.path.join(ROOT, "evaluation/results/v2.csv")); main(ap.parse_args().alive)
+    ap = argparse.ArgumentParser(); ap.add_argument("--alive", default=os.path.join(ROOT, "evaluation/results/v2.csv")); ap.add_argument("--source", default="tactical"); a = ap.parse_args(); main(a.alive, a.source)

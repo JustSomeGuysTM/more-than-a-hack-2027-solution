@@ -16,11 +16,12 @@ from src.possession import viterbi, score, LAB
 from src.external import degrade_ball
 IDS = ["J03WMX", "J03WN1", "J03WOH", "J03WOY", "J03WPY", "J03WQQ", "J03WR9"]
 MODEL = os.path.join(ROOT, "src/v2_model.pkl")
+VISIBLE = 0.57   # ATD ball visibility on graded frames; 0.78 after ball_fuse.py (detector fills gaps)
 V = dict(temp=1.0, switch=10.0, switch_d=10.0)      # DFL leave-one-out: v2 spellF1 0.50 / macroF1 0.89; v3 (+since-touch features) 0.56 / 0.91 (2026-10-26). emissions are log-probs (~[-7, 0]); penalties are in the same units
 
 def dfl_game(mid, seed):
     z = np.load(os.path.join(ROOT, f"data_raw/external/dfl_{mid}.npz")); d = {q: z[q] for q in z.files}; d["fps"] = 25
-    return degrade_ball(d, seed=seed)
+    return degrade_ball(d, visible=VISIBLE, seed=seed)
 
 def mirror(X, names):
     """Swap home and away columns, negate the differences."""
@@ -59,9 +60,9 @@ def cv():
 def train():
     X, y, names = dataset(IDS); clf = fit(X, y); pickle.dump({"clf": clf, "names": names}, open(MODEL, "wb")); print("trained on", X.shape, "->", MODEL)
 
-def run_barath(out):
+def run_barath(out, source="tactical"):
     import pandas as pd; from eda.atd import load; from games import GAMES, GAME
-    m = pickle.load(open(MODEL, "rb")); d = load("tactical"); d["fps"] = 25; F = len(d["ball"])
+    m = pickle.load(open(MODEL, "rb")); d = load(source); d["fps"] = 25; F = len(d["ball"])
     X, names = features(d, GAMES[GAME]["pitch"]); assert names == m["names"]
     logp = np.log(m["clf"].predict_proba(X).clip(1e-4, 1))
     alive = np.zeros(F, bool); alive[11185:90652] = True; alive[113742:190198] = True; logp[~alive, :2] = -20   # outside the halves is dead by definition
@@ -70,5 +71,5 @@ def run_barath(out):
     print("BAR-ATH public window (sanity only):", score(gt, lab)); print("wrote", out)
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("--cv", action="store_true"); ap.add_argument("--train", action="store_true"); ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/v3.csv"))
-    a = ap.parse_args(); cv() if a.cv else train() if a.train else run_barath(a.out)
+    ap = argparse.ArgumentParser(); ap.add_argument("--cv", action="store_true"); ap.add_argument("--train", action="store_true"); ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/v3.csv")); ap.add_argument("--source", default="tactical", help="tactical or tactical_fused (ball_fuse.py)"); ap.add_argument("--visible", type=float, default=VISIBLE, help="DFL ball visibility for --cv/--train; 0.78 to match tactical_fused")
+    a = ap.parse_args(); VISIBLE = a.visible; cv() if a.cv else train() if a.train else run_barath(a.out, a.source)
