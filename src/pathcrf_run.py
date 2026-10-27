@@ -31,6 +31,19 @@ def main(trial, alive_csv, out):
     w = slice(11185, 18685); print("agreement v2 vs pathcrf on alive frames in window: %.3f" % (lab[w][lab[w] != "D"] == pc[w][lab[w] != "D"]).mean())
     print("wrote", out)
 
+def score_external(trial, gid):
+    """PathCRF checkpoint on a PFF match (src/pff.py --pathcrf) against its algorithmic labels; dead frames taken from the labels."""
+    from src.pff import pff, PATHCRF; from src.possession import score
+    args = load_trial_args(f"saved/{trial}"); model = build_model(args, device="cpu")
+    model.load_state_dict(torch.load(resolve_model_path(f"saved/{trial}", "state_dict_best_acc.pt"), map_location="cpu", weights_only=False)); model.eval()
+    tr = pd.read_parquet(f"{PATHCRF}/{gid}.parquet"); L = pff(gid)["labels"].astype(object); pc = L.copy()
+    _, _, micro, _ = inference(model, tr, use_crf=args.get("crf_weight", 0) > 0, decode="indep", window_seconds=args.get("window_seconds"), correct_episode_lasts=False)
+    fr = micro.index.values if micro.index.name == "frame_id" else tr["frame_id"].values
+    for f, s in zip(fr, micro["edge_src"].values):
+        if isinstance(s, str) and L[f] != "D" and s[:4] in ("home", "away"): pc[f] = "H" if s[:4] == "home" else "A"
+    cov = np.mean([isinstance(s, str) and s[:4] in ("home", "away") for s in micro["edge_src"].values]); r = score(L, pc)
+    print(f"PathCRF trial {trial} on PFF {gid}: spellF1 {r['spell_f1_mean']:.3f} macroF1 {r['macro_f1']:.3f} spells {r['n_pred_spells']:.0f} (gt {r['n_gt_spells']:.0f}), frames with a team {cov:.2f}, alive frame acc {(pc[L != 'D'] == L[L != 'D']).mean():.3f}")
+
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("--trial", type=int, default=140); ap.add_argument("--alive", default=os.path.join(ROOT, "evaluation/results/v2.csv")); ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/pathcrf.csv"))
-    a = ap.parse_args(); main(a.trial, a.alive, a.out)
+    ap = argparse.ArgumentParser(); ap.add_argument("--trial", type=int, default=140); ap.add_argument("--alive", default=os.path.join(ROOT, "evaluation/results/v2.csv")); ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/pathcrf.csv")); ap.add_argument("--pff", help="score the checkpoint on this PFF game id instead")
+    a = ap.parse_args(); score_external(a.trial, a.pff) if a.pff else main(a.trial, a.alive, a.out)
