@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# One-shot setup for a CPU dev pod (Ubuntu). Run from $HOME:  bash setup.sh
-# Needs: GH_TOKEN (private repo), optional AWS creds (profile mtah) for the match data.
+# One-shot setup for a CPU pod. Run from $HOME:  bash setup.sh
+# No S3 needed: the overnight jobs use only the public DFL data (figshare) and our code. The pod's own
+# GitHub login must be able to read the private team repo (or set GH_TOKEN).
 set -euo pipefail
-sudo apt-get update -qq && sudo apt-get install -y -qq git ffmpeg build-essential curl >/dev/null
-curl -LsSf https://astral.sh/uv/install.sh | sh; export PATH="$HOME/.local/bin:$PATH"
-git clone https://${GH_TOKEN}@github.com/JustSomeGuysTM/more-than-a-hack-2027-solution.git mtah2027 2>/dev/null || true
+command -v sudo >/dev/null && sudo apt-get update -qq && sudo apt-get install -y -qq git ffmpeg build-essential curl >/dev/null || true
+command -v uv >/dev/null || (curl -LsSf https://astral.sh/uv/install.sh | sh); export PATH="$HOME/.local/bin:$PATH"
+git clone https://${GH_TOKEN:+${GH_TOKEN}@}github.com/JustSomeGuysTM/more-than-a-hack-2027-solution.git mtah2027 2>/dev/null || true
 git clone https://github.com/hyunsungkim-ds/pathcrf 2>/dev/null || true
-cd ~/mtah2027 && git checkout possession-v3 && uv venv -q --python 3.11 .venv && uv pip install -q --python .venv/bin/python -r requirements.txt floodlight "scikit-learn==1.5.2" torch --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple
+cd ~/mtah2027 && { [ -d .git ] && git checkout possession-v3 || true; } && uv venv -q --python 3.11 .venv && uv pip install -q --python .venv/bin/python -r requirements.txt floodlight "scikit-learn==1.5.2" torch --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple
 # DFL open data (figshare, 2.4 GB) -> floodlight cache -> our npz caches
 .venv/bin/python -c "from floodlight.io.datasets import IDSSEDataset; IDSSEDataset(dataset_dir_name='idsse', match_id='all')"
 mkdir -p data_raw/external && .venv/bin/python - <<'PY'

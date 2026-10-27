@@ -254,3 +254,13 @@ PathCRF gets the possession *structure* right (366 vs 370 spells) where our mode
 possessions. It does not model dead balls -> pair it with our D detector. Open problem: it wants
 11 identified players per team; BAR-ATH has 46 tracklet slots with ID churn (see src/pathcrf_io.py
 once written). One-line patch applied in `~/pathcrf/inference.py` (pandas read-only arrays).
+
+### PathCRF on BAR-ATH (2026-10-26)
+`src/pathcrf_io.py` stitches the 46 tracklet slots into 11 persistent tracks per team (segments
+linked in start order within 5 s / 8 m/s, gaps <= 2 s interpolated, position held inside an
+episode), alive/dead from v2's CSV, episodes >= 10 s cover 100% of alive time, 10.8 players per
+team per frame. `src/pathcrf_run.py` runs the authors' checkpoint (~50 s CPU) and merges: PathCRF
+team on alive frames it covers, v2 elsewhere. Public window (sanity): **spellF1 0.615, macroF1
+0.716, 24 spells** vs v2 0.521 / 0.698. No training on our side yet; goalkeeper identity not
+provided (model expects it). `src/commentary_model.py`: stoppage classifier trained on
+SoccerNet-Echoes transcripts + SoccerNet labels (other games), applied through the alignment.

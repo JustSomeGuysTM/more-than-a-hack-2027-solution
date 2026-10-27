@@ -20,7 +20,7 @@ def main(trial, alive_csv, out):
     team = micro["edge_src"].map(lambda s: "H" if isinstance(s, str) and s.startswith("home") else "A" if isinstance(s, str) and s.startswith("away") else None)   # out_/goal_ nodes: keep the v2 label
     fr = micro.index.values if micro.index.name == "frame_id" else tr["frame_id"].values
     for f, t in zip(fr, team.values):
-        if t is not None and lab[f] != "D": pc[f] = t
+        if isinstance(t, str) and lab[f] != "D": pc[f] = t          # NaN edge (episode not covered) keeps the v2 label
     pc = np.where(np.isin(pc, ["H", "A", "D", "X"]), pc, "X").astype(object); lab = np.where(np.isin(lab, ["H", "A", "D", "X"]), lab, "X").astype(object)
     print("labels:", {k: int((pc == k).sum()) for k in "HADX"}, "| v2:", {k: int((lab == k).sum()) for k in "HADX"})
     pd.DataFrame({"frame": np.arange(F), "label": pc}).to_csv(out, index=False)
