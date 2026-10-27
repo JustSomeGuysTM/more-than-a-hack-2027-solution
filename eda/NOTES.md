@@ -157,19 +157,28 @@ leaving the centre spot at frames 11185 and 113742.
 Ball gap fill (≤2 s linear) -> per-frame evidence (H/A: `(8 m - dist to nearest player of that
 team)`, D: off pitch / outside halves / ball missing / ball lying still away from everyone) ->
 Viterbi over {H,A,D} with a switch penalty. numpy only, ~1 s for the whole match.
-Tuned on **Metrica sample games 1+2** (`src/external.py`, labels derived from their event stream,
-ball hidden to BAR-ATH-like 35% visibility), never on the public window.
+Tuned on the **7 DFL open matches** (real per-frame possession + ball-status labels) and **Metrica
+sample games 1+2** (labels derived from their event stream), ball hidden to BAR-ATH-like 35%
+visibility (`src/external.py`), never on the public window. DFL conversions cached in
+`data_raw/external/dfl_*.npz` (12 s each to build with floodlight).
 
 | | spellF1 | macroF1 | spells (gt) |
 |---|---|---|---|
-| Metrica 1+2 degraded, organisers' baseline_smooth50 | 0.13 | 0.48 | 470 (346) |
-| Metrica 1+2 degraded, **v1** | **0.45** | 0.67 | 254 (346) |
+| 7 DFL matches degraded, organisers' baseline_smooth50 | 0.12 | 0.44 | 725 (437) |
+| 7 DFL matches degraded, **v1** | **0.32** | 0.69 | 322 (437) |
+| Metrica 1+2 degraded, baseline_smooth50 | 0.13 | 0.48 | 470 (346) |
+| Metrica 1+2 degraded, **v1** | **0.44** | 0.67 | 309 (346) |
 | BAR-ATH public 5 min, baseline_smooth50 (official scorer) | 0.33 | 0.62 | 26 (17) |
-| BAR-ATH public 5 min, **v1** (sanity only) | **0.37** | 0.67 | 22 (17) |
+| BAR-ATH public 5 min, **v1** (sanity only) | **0.35** | 0.67 | 24 (17) |
 
-Still under-predicting spell count (misses short possessions) and D is rule-only. Next: DFL open
-data as a second, better-labelled validation set (`src/external.py:dfl`), smart-tagging set pieces
-and the whistle/commentary cues into the D evidence, touch-based switches instead of distance.
+Smart-tagging SET PIECES windows are weak D evidence only: 56% of their frames are dead in the
+public GT, and the tracked ball is never "still" inside them (median 5 m/s, same as open play), so
+the restart moment cannot be read off ball speed.
+
+Still under-predicting spell count (misses short possessions) and D is rule-only. Next (v2):
+train a per-frame classifier on DFL features (distances, ball speed, player spread, visibility) ->
+P(H/A/D) as Viterbi emissions; touch-based switches; whistle (crowd stem) + commentary cues via
+`eda.align.b2t` into the D evidence.
 
 **S3:** my IAM user (`Eli-more-than-a-hack`) has no `s3:PutObject` on the bucket, so external data
 is local only (`data_raw/external/`, gitignored) until Brandon grants write. Planned layout:

@@ -9,6 +9,7 @@ Evidence (log-scores per frame):
   D   : DEAD_OFF if the ball is off the pitch or before kickoff / after the half;
         DEAD_MISS if the ball is untracked (after short-gap interpolation);
         DEAD_STILL if the ball sits > STILL_DIST m from everyone and moves < STILL_SPEED m/s
+  D   : + DEAD_TAG (weak) inside a smart-tagging SET PIECES window (BAR-ATH only)
   Viterbi: staying costs 0, switching costs SWITCH (log-odds), D<->team switches cost SWITCH_D.
 Constants are set by eye from EDA and should be tuned on external games (src/external.py), never
 on the public window.
@@ -16,7 +17,7 @@ on the public window.
 import argparse, os, sys
 import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
-P = dict(gap=50, sigma=1.0, cap=8.0, dead_off=6.0, dead_miss=0.6, dead_still=3.0, still_dist=4.0, still_speed=0.6, switch=60.0, switch_d=42.0, margin=0.5)   # tuned on Metrica 1+2 with degraded ball (src/external.py), 2026-10-26
+P = dict(gap=50, sigma=1.0, cap=8.0, dead_off=6.0, dead_miss=0.6, dead_still=3.0, still_dist=4.0, still_speed=0.6, switch=40.0, switch_d=40.0, margin=0.5, dead_tag=1.5)   # tuned on 7 DFL matches + Metrica 1-2 with degraded ball (src/external.py), 2026-10-26
 LAB = np.array(list("HAD"))
 
 def fill_ball(b, max_gap):
@@ -29,7 +30,7 @@ def fill_ball(b, max_gap):
     bad[:idx[0]] = bad[idx[-1] + 1:] = True
     out[bad] = np.nan; return out
 
-def evidence(d, pitch, alive_mask, p=P):
+def evidence(d, pitch, alive_mask, p=P, setpiece=None):
     pl, team = d["players"][:, :, :2], d["team"]; L, W = pitch; fps = d.get("fps", 25)
     b = fill_ball(d["ball"][:, :2], p["gap"]); known = np.isfinite(b[:, 0])
     dist = np.linalg.norm(pl - b[:, None, :], axis=2)                                   # (F,N), NaN where either unknown
@@ -40,6 +41,7 @@ def evidence(d, pitch, alive_mask, p=P):
     speed = np.r_[0, np.linalg.norm(np.diff(b, axis=0), axis=1)] * fps
     still = known & (np.minimum(dH, dA) > p["still_dist"]) & (speed < p["still_speed"])
     e[:, 2] = p["dead_off"] * (off | ~alive_mask) + p["dead_miss"] * ~known + p["dead_still"] * still
+    if setpiece is not None: e[:, 2] += p["dead_tag"] * setpiece   # weak: only ~55% of a tagged restart window is dead (ball speed cannot tell, the tracked ball is never still)
     e[:, :2] -= p["dead_off"] * ~alive_mask[:, None]
     return e
 
@@ -53,9 +55,9 @@ def viterbi(e, switch, switch_d):
     for t in range(F - 1, 0, -1): path[t - 1] = back[t, path[t]]
     return path
 
-def predict(d, pitch, alive_mask=None, p=P):
+def predict(d, pitch, alive_mask=None, p=P, setpiece=None):
     if alive_mask is None: alive_mask = np.ones(len(d["ball"]), bool)
-    return LAB[viterbi(evidence(d, pitch, alive_mask, p), p["switch"], p["switch_d"])]
+    return LAB[viterbi(evidence(d, pitch, alive_mask, p, setpiece), p["switch"], p["switch_d"])]
 
 def score(gt_labels, pred_labels):
     sys.path.insert(0, os.path.join(ROOT, "evaluation")); import possession_metrics as pm
@@ -65,7 +67,11 @@ def score(gt_labels, pred_labels):
 def run_barath(out):
     from eda.atd import load; from games import GAMES, GAME
     d = load("tactical"); F = len(d["ball"]); alive = np.zeros(F, bool); alive[11185:90652] = True; alive[113742:190198] = True
-    lab = predict(d, GAMES[GAME]["pitch"], alive)
+    import xml.etree.ElementTree as ET; from games import require
+    sp = np.zeros(F, bool)                      # smart-tagging SET PIECES windows (seconds from video start)
+    for i in ET.parse(require(["smart_tagging"])[0]).getroot().iter("instance"):
+        if i.findtext("code") == "SET PIECES": sp[int(float(i.findtext("start")) * 25):int(float(i.findtext("end")) * 25) + 1] = True
+    lab = predict(d, GAMES[GAME]["pitch"], alive, setpiece=sp)
     import pandas as pd
     pd.DataFrame({"frame": np.arange(F), "label": lab}).to_csv(out, index=False)
     gt = pd.read_csv(os.path.join(ROOT, "evaluation/gt/BAR-ATH_possession_gt_public.csv"))["label"].values
