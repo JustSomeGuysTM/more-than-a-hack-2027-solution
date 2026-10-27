@@ -88,7 +88,12 @@ def pathcrf(gid):
         e = s + int(np.argmax(~alive[s:])) if (~alive[s:]).any() else F
         if e - s >= 10 * FPS: ep[s:e] = k
     df["episode_id"] = ep; df["phase_id"] = ep
-    for s, name in enumerate(d["slots"]): df[f"{name}_x"] = d["players"][:, s, 0]; df[f"{name}_y"] = d["players"][:, s, 1]
+    for s, name in enumerate(d["slots"]):
+        x, y = d["players"][:, s, 0].copy(), d["players"][:, s, 1].copy()
+        for p in np.unique(per):                       # PathCRF smooths per period with a 15-frame window: drop blips shorter than 1 s
+            i = per == p
+            if np.isfinite(x[i]).sum() < FPS: x[i] = np.nan; y[i] = np.nan
+        df[f"{name}_x"] = x; df[f"{name}_y"] = y
     df = calculate_running_features(df); os.makedirs(PATHCRF, exist_ok=True); df.to_parquet(f"{PATHCRF}/{gid}.parquet"); return gid, df.shape, int(ep.max())
 
 if __name__ == "__main__":
