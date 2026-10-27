@@ -1,0 +1,53 @@
+"""Per-frame features for the v2 classifier. Slot-agnostic (per-team nearest distances, counts,
+spread), so DFL (22 clean tracks, ball always seen) and BAR-ATH (46 tracklet slots, ball 57%) look
+alike once the DFL ball is degraded. Everything is in metres on a corner-origin pitch.
+
+    X, names = features(d, pitch)      # (F, n_features) float32
+"""
+import os, sys
+import numpy as np
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.possession import fill_ball
+
+def roll(x, half):
+    """Centred moving mean over 2*half+1 frames, NaN-aware."""
+    v = np.where(np.isfinite(x), x, 0.0); c = np.isfinite(x).astype(float)
+    k = np.ones(2 * half + 1); s = np.convolve(v, k, "same"); n = np.convolve(c, k, "same")
+    return np.where(n > 0, s / np.maximum(n, 1), np.nan)
+
+def features(d, pitch, gap=50):
+    pl, team = d["players"][:, :, :2], d["team"]; L, W = pitch; fps = d.get("fps", 25)
+    raw = d["ball"][:, :2]; seen = np.isfinite(raw[:, 0])
+    b = fill_ball(raw, gap); known = np.isfinite(b[:, 0]); F = len(b)
+    # frames since the ball was last seen / until next seen (capped 10 s)
+    idx = np.arange(F); last = np.maximum.accumulate(np.where(seen, idx, -1)); since = np.where(last >= 0, idx - last, 250).clip(0, 250)
+    nxt = np.minimum.accumulate(np.where(seen, idx, F)[::-1])[::-1]; until = np.where(nxt < F, nxt - idx, 250).clip(0, 250)
+    # last known ball position carried forward, for cluster features during gaps
+    bc = b.copy()
+    for k in range(2): bc[:, k] = np.where(known, b[:, k], np.nan); bc[:, k] = np.interp(idx, idx[known], b[known, k]) if known.any() else bc[:, k]
+    dist = np.linalg.norm(pl - bc[:, None, :], axis=2)
+    out = {"known": known.astype(float), "seen": seen.astype(float), "since": since / 25.0, "until": until / 25.0}
+    for nm, t in (("H", 0), ("A", 1)):
+        dt = np.where(team == t, dist, np.nan); srt = np.sort(np.where(np.isfinite(dt), dt, 99.0), axis=1)
+        out[f"d1{nm}"] = srt[:, 0].clip(0, 30); out[f"d2{nm}"] = srt[:, 1].clip(0, 30)
+        out[f"n3{nm}"] = (dt < 3).sum(1).astype(float); out[f"n8{nm}"] = (dt < 8).sum(1).astype(float)
+    out["ddiff"] = out["d1H"] - out["d1A"]
+    speed = np.r_[0, np.linalg.norm(np.diff(b, axis=0), axis=1)] * fps; out["speed"] = np.where(known, speed, np.nan).clip(0, 40)
+    out["bx"] = bc[:, 0] / L; out["by"] = bc[:, 1] / W
+    out["off"] = (known & ((b[:, 0] < -0.5) | (b[:, 0] > L + 0.5) | (b[:, 1] < -0.5) | (b[:, 1] > W + 0.5))).astype(float)
+    out["edge"] = np.minimum(np.minimum(bc[:, 0], L - bc[:, 0]), np.minimum(bc[:, 1], W - bc[:, 1])).clip(-5, 20)
+    ok = np.isfinite(pl[:, :, 0]); n = ok.sum(1).clip(1); cen = np.nansum(np.where(ok[:, :, None], pl, 0), 1) / n[:, None]
+    out["ntracked"] = n.astype(float); out["spread"] = np.sqrt(np.nansum(np.where(ok, ((pl - cen[:, None]) ** 2).sum(2), 0), 1) / n).clip(0, 50)
+    out["dcen"] = np.linalg.norm(bc - cen, axis=1).clip(0, 60)
+    out["pspeed"] = np.r_[0, np.nanmean(np.linalg.norm(np.diff(pl, axis=0), axis=2), 1)] * fps   # mean player speed (walking = dead)
+    base = dict(out)
+    for half in (12, 50):                                                     # ±0.5 s and ±2 s context
+        for k in ("d1H", "d1A", "ddiff", "speed", "known", "pspeed", "n3H", "n3A"): out[f"{k}_r{half}"] = roll(base[k], half)
+    names = list(out); X = np.column_stack([out[k] for k in names]).astype(np.float32)
+    return X, names
+
+if __name__ == "__main__":
+    from src.external import metrica, degrade_ball
+    d = degrade_ball(metrica(1)); X, names = features(d, (105.0, 68.0))
+    assert X.shape == (len(d["ball"]), len(names)) and np.isfinite(X[:, names.index("d1H")]).all()
+    print(X.shape, names); print("nan fraction per feature:", {k: round(float(np.isnan(X[:, i]).mean()), 2) for i, k in enumerate(names) if np.isnan(X[:, i]).any()})

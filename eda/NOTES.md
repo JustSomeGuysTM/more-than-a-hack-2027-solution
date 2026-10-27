@@ -183,3 +183,25 @@ P(H/A/D) as Viterbi emissions; touch-based switches; whistle (crowd stem) + comm
 **S3:** my IAM user (`Eli-more-than-a-hack`) has no `s3:PutObject` on the bucket, so external data
 is local only (`data_raw/external/`, gitignored) until Brandon grants write. Planned layout:
 `s3://more-than-a-hack-2027/external/{metrica-sample,dfl}/`.
+
+## Possession v2 (`src/v2.py`, `src/features.py`, 2026-10-26)
+Per-frame HistGradientBoosting classifier (38 slot-agnostic features: per-team nearest distances
+and counts, ball visibility/gap length, ball speed, pitch position, player spread/speed, ±0.5 s and
+±2 s rolling context) trained on the **7 DFL matches** with the ball degraded, home/away mirrored
+(2.0M rows). log P(H/A/D) are the Viterbi emissions, switch penalty 10. Model: `src/v2_model.pkl`
+(3 MB, regenerate with `--train`, ~2 min). BAR-ATH inference: `python src/v2.py` (~30 s).
+
+| | spellF1 | macroF1 | spells (gt) |
+|---|---|---|---|
+| DFL leave-one-match-out, v1 | 0.32 | 0.69 | 322 (437) |
+| DFL leave-one-match-out, **v2** | **0.50** | **0.89** | 317 (437) |
+| Metrica 1+2 degraded (never trained on), v1 | 0.44 | 0.67 | 309 (346) |
+| Metrica 1+2 degraded (never trained on), **v2** | **0.48** | 0.70 | 342 (346) |
+| BAR-ATH public 5 min, baseline_smooth50 | 0.33 | 0.62 | 26 (17) |
+| BAR-ATH public 5 min, v1 | 0.35 | 0.67 | 24 (17) |
+| BAR-ATH public 5 min, **v2** (sanity only) | **0.52** | **0.70** | 16 (17) |
+
+Frame accuracy on held-out DFL is 0.90; the DFL->Metrica gap (0.89 -> 0.70 macroF1) is partly the
+derived Metrica labels, partly domain shift. Next: whistle + commentary cues as extra features
+(via `eda.align.b2t`), smart-tagging windows as a feature, bigger context windows, and a
+transition model that knows a possession starts with a controlled touch.
