@@ -273,3 +273,21 @@ On BAR-ATH through the clock alignment it covers 72% of frames; public window P(
 0.29 vs base 0.20 (keyword rule was 0.23). Weak but real. Not in v2/v3 (no such feature on DFL);
 usable only as extra D evidence at decode time with a hand-set weight -> parked, documented.
 Output: `eda/out/commentary_stoppage.npz` (per-frame probability).
+
+## Ball detector (`src/ball_detect.py`, 2026-10-27)
+YOLOv8n trained on 2,269 ball tiles + 3,880 ball-free tiles cut from every 50th tactical frame,
+labels = ATD ball projected through the homography and snapped to the brightest small blob
+(median snap 14 px). No human label. Val tiles: P 0.76, R 0.52, mAP50 0.58. Every-50th-frame
+check against the ATD (3,119 alive frames):
+
+| conf | detects on ATD-ball frames | median error vs ATD | detects on ATD-missing frames |
+|---|---|---|---|
+| 0.10 | 97% | 1.5 m | 75% |
+| **0.25** | 87% | 1.3 m | **46%** |
+| 0.40 | 76% | 1.2 m | 30% |
+
+At 0.25 the fused ball (`src/ball_fuse.py`: ATD first, detector otherwise) should take graded-frame
+visibility from 59% to ~78%. Inference over the whole match ≈ 2.5 h on the laptop (MPS), 4x2 tiles
+of 640 px per frame. Weights `src/ball_yolov8n.pt`; detections `eda/out/ball/detections.npz` and
+bucket `derived/ball_detections.npz`. Next: re-run v2 / PathCRF stitching on the fused ball and
+retrain v2 with DFL ball degraded to ~78% instead of 57%.
