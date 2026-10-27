@@ -142,8 +142,15 @@ the rest are replays/cutaways/pre-match). Clock runs in real time, so each half 
 
 | half | clock = broadcast_sec + | tactical frame = | broadcast range with clock |
 |---|---|---|---|
-| 1 | -286.5 s | 11185 + 25·clock | 308–2978 s |
-| 2 | -773.5 s | 113742 + 25·(clock-2700) | 3492–6544 s |
+| 1 | -286.86 s | 11185 + 25·clock | 308–2978 s |
+| 2 | -772.90 s | 113742 + 25·(clock-2700) | 3492–6544 s |
+
+Refined to the frame (2026-10-26) by minimising the broadcast-ATD vs tactical-ATD ball
+disagreement: clock-only offsets (-286.5 / -773.5) gave 2.4 / 4.0 m median disagreement, the
+refined ones 0.82 / 0.86 m. Both values are kept in `eda/align.json` (`offset_clock`, `offset`).
+
+Broadcast ball fusion was tried and dropped: the broadcast ATD carries a pitch-coordinate ball on
+only 26% of graded frames and adds just 2.6% of frames the tactical feed does not already see.
 
 91–94% of reads agree with the offset to within 1 s; the rest are OCR misreads. Validated
 independently: broadcast-ATD vs tactical-ATD player-centroid distance is minimised within ±1–2 s of
@@ -152,3 +159,174 @@ format in stoppage time (reads stop at 44:50 / ~96:00) but the offset still appl
 Use: `from eda.align import b2t; b2t(broadcast_seconds) -> tactical frame or None`. Constants in
 `eda/align.json`; reads in `eda/out/ocr/clock_ocr.csv`. Tactical kickoffs confirmed from the ball
 leaving the centre spot at frames 11185 and 113742.
+
+## Possession v1 (`src/possession.py`, 2026-10-26)
+Ball gap fill (≤2 s linear) -> per-frame evidence (H/A: `(8 m - dist to nearest player of that
+team)`, D: off pitch / outside halves / ball missing / ball lying still away from everyone) ->
+Viterbi over {H,A,D} with a switch penalty. numpy only, ~1 s for the whole match.
+Tuned on the **7 DFL open matches** (real per-frame possession + ball-status labels) and **Metrica
+sample games 1+2** (labels derived from their event stream), ball hidden to BAR-ATH-like 35%
+visibility (`src/external.py`), never on the public window. DFL conversions cached in
+`data_raw/external/dfl_*.npz` (12 s each to build with floodlight).
+
+| | spellF1 | macroF1 | spells (gt) |
+|---|---|---|---|
+| 7 DFL matches degraded, organisers' baseline_smooth50 | 0.12 | 0.44 | 725 (437) |
+| 7 DFL matches degraded, **v1** | **0.32** | 0.69 | 322 (437) |
+| Metrica 1+2 degraded, baseline_smooth50 | 0.13 | 0.48 | 470 (346) |
+| Metrica 1+2 degraded, **v1** | **0.44** | 0.67 | 309 (346) |
+| BAR-ATH public 5 min, baseline_smooth50 (official scorer) | 0.33 | 0.62 | 26 (17) |
+| BAR-ATH public 5 min, **v1** (sanity only) | **0.35** | 0.67 | 24 (17) |
+
+Smart-tagging SET PIECES windows are weak D evidence only: 56% of their frames are dead in the
+public GT, and the tracked ball is never "still" inside them (median 5 m/s, same as open play), so
+the restart moment cannot be read off ball speed.
+
+Still under-predicting spell count (misses short possessions) and D is rule-only. Next (v2):
+train a per-frame classifier on DFL features (distances, ball speed, player spread, visibility) ->
+P(H/A/D) as Viterbi emissions; touch-based switches; whistle (crowd stem) + commentary cues via
+`eda.align.b2t` into the D evidence.
+
+**S3:** my IAM user (`Eli-more-than-a-hack`) has no `s3:PutObject` on the bucket, so external data
+is local only (`data_raw/external/`, gitignored) until Brandon grants write. Planned layout:
+`s3://more-than-a-hack-2027/external/{metrica-sample,dfl}/`.
+
+## Possession v2 (`src/v2.py`, `src/features.py`, 2026-10-26)
+Per-frame HistGradientBoosting classifier (38 slot-agnostic features: per-team nearest distances
+and counts, ball visibility/gap length, ball speed, pitch position, player spread/speed, ±0.5 s and
+±2 s rolling context) trained on the **7 DFL matches** with the ball degraded, home/away mirrored
+(2.0M rows). log P(H/A/D) are the Viterbi emissions, switch penalty 10. Model: `src/v2_model.pkl`
+(3 MB, regenerate with `--train`, ~2 min). BAR-ATH inference: `python src/v2.py` (~30 s).
+
+| | spellF1 | macroF1 | spells (gt) |
+|---|---|---|---|
+| DFL leave-one-match-out, v1 | 0.32 | 0.69 | 322 (437) |
+| DFL leave-one-match-out, **v2** | **0.50** | **0.89** | 317 (437) |
+| Metrica 1+2 degraded (never trained on), v1 | 0.44 | 0.67 | 309 (346) |
+| Metrica 1+2 degraded (never trained on), **v2** | **0.48** | 0.70 | 342 (346) |
+| BAR-ATH public 5 min, baseline_smooth50 | 0.33 | 0.62 | 26 (17) |
+| BAR-ATH public 5 min, v1 | 0.35 | 0.67 | 24 (17) |
+| BAR-ATH public 5 min, **v2** (sanity only) | **0.52** | **0.70** | 16 (17) |
+
+Frame accuracy on held-out DFL is 0.90; the DFL->Metrica gap (0.89 -> 0.70 macroF1) is partly the
+derived Metrica labels, partly domain shift. Next: whistle + commentary cues as extra features
+(via `eda.align.b2t`), smart-tagging windows as a feature, bigger context windows, and a
+transition model that knows a possession starts with a controlled touch.
+
+## Audio cues: negative result (`src/audio_cues.py`, 2026-10-26)
+Whistle detector on the Demucs crowd stem (3-4.5 kHz tonal peak, robust z > 6, 227 onsets) and
+commentary restart words (throw-in / corner / free kick / foul / offside / penalty / goal, word
+timestamps mapped with `eda.align.b2t`). Checked against the smart-tagging SET PIECES windows
+(no labels involved): P(set-piece window | whistle) 0.26 vs base 0.22, restart words 0.27. In the
+public window P(D | whistle) is 0.14 vs base 0.20 -- the stadium crowd whistles constantly, so the
+detector finds fans, not the referee. Not used in v3. Would need a referee-whistle classifier
+trained on other games' audio (e.g. SoccerNet-Echoes games) to be worth revisiting.
+
+## Possession v3 (`src/v2.py` + 8 "since/until" features, 2026-10-26)
+Adds seconds since/until the last home touch, away touch, ball off pitch and ball speed jump
+(46 features). ±5 s rolling context was also tried: no gain, dropped.
+
+| | spellF1 | macroF1 | spells (gt) |
+|---|---|---|---|
+| DFL leave-one-match-out, v2 -> **v3** | 0.50 -> **0.56** | 0.89 -> **0.91** | 317 -> 316 (437) |
+| Metrica 1+2 degraded (held out), v2 -> **v3** | 0.48 -> **0.52** | 0.70 -> **0.71** | 342 -> 320 (346) |
+| BAR-ATH public 5 min, v2 -> v3 (sanity only) | 0.52 -> 0.39 | 0.70 -> 0.69 | 16 -> 27 (17) |
+
+Split result: every external check improves, the public window gets worse and v3 fragments
+BAR-ATH into 27 spells. 17 possessions is far too few to decide, but the fragmentation is a real
+hint that the touch features behave differently on our tracklets (46 slots, ~20.5 tracked, ID
+switches) than on DFL's clean 22 tracks. **v2 stays the submission candidate** until the external
+validation also degrades the *player* tracking to BAR-ATH-like quality (drop ~7% of player
+observations, add ID churn) -- that is the honest way to pick between them.
+
+## PathCRF (KDD 2026, github.com/hyunsungkim-ds/pathcrf) — first honest number (2026-10-26)
+Cloned to `~/pathcrf` (own venv: torch, torch_geometric, rdp). Its training data *is* the DFL open
+dataset (raw XML linked in from floodlight's cache, `datatools/preprocess.py` run). Authors' pretrained
+checkpoint `saved/140` (leave-one-match-out, held-out = J03WR9) run on that match, 70 s on CPU.
+It predicts the possession edge (carrier -> receiver) from **player tracking only, no ball**.
+
+| J03WR9 held out, GT dead frames substituted for both | spellF1 | macroF1 | spells (gt 370) | team acc alive |
+|---|---|---|---|---|
+| GBDT v3 trained on the other 6 | 0.57 | 0.93 | 278 | 0.90 |
+| **PathCRF** pretrained | **0.69** | **0.95** | **366** | **0.93** |
+
+PathCRF gets the possession *structure* right (366 vs 370 spells) where our model merges short
+possessions. It does not model dead balls -> pair it with our D detector. Open problem: it wants
+11 identified players per team; BAR-ATH has 46 tracklet slots with ID churn (see src/pathcrf_io.py
+once written). One-line patch applied in `~/pathcrf/inference.py` (pandas read-only arrays).
+
+### PathCRF on BAR-ATH (2026-10-26)
+`src/pathcrf_io.py` stitches the 46 tracklet slots into 11 persistent tracks per team (segments
+linked in start order within 5 s / 8 m/s, gaps <= 2 s interpolated, position held inside an
+episode), alive/dead from v2's CSV, episodes >= 10 s cover 100% of alive time, 10.8 players per
+team per frame. `src/pathcrf_run.py` runs the authors' checkpoint (~50 s CPU) and merges: PathCRF
+team on alive frames it covers, v2 elsewhere. Public window (sanity): **spellF1 0.615, macroF1
+0.716, 24 spells** vs v2 0.521 / 0.698. No training on our side yet; goalkeeper identity not
+provided (model expects it). `src/commentary_model.py`: stoppage classifier trained on
+SoccerNet-Echoes transcripts + SoccerNet labels (other games), applied through the alignment.
+
+## Commentary stoppage model (`src/commentary_model.py`, 2026-10-27)
+TF-IDF + logistic regression on SoccerNet-Echoes English transcripts (330 matches with labels,
+352k 10-s windows) vs SoccerNet stoppage labels within a lag window. Held-out games: AUC 0.565,
+AP 0.51 (base 0.44); top terms are the right ones (throw in, corner, offside, foul, into touch).
+On BAR-ATH through the clock alignment it covers 72% of frames; public window P(D | p >= 0.5) =
+0.29 vs base 0.20 (keyword rule was 0.23). Weak but real. Not in v2/v3 (no such feature on DFL);
+usable only as extra D evidence at decode time with a hand-set weight -> parked, documented.
+Output: `eda/out/commentary_stoppage.npz` (per-frame probability).
+
+## Ball detector (`src/ball_detect.py`, 2026-10-27)
+YOLOv8n trained on 2,269 ball tiles + 3,880 ball-free tiles cut from every 50th tactical frame,
+labels = ATD ball projected through the homography and snapped to the brightest small blob
+(median snap 14 px). No human label. Val tiles: P 0.76, R 0.52, mAP50 0.58. Every-50th-frame
+check against the ATD (3,119 alive frames):
+
+| conf | detects on ATD-ball frames | median error vs ATD | detects on ATD-missing frames |
+|---|---|---|---|
+| 0.10 | 97% | 1.5 m | 75% |
+| **0.25** | 87% | 1.3 m | **46%** |
+| 0.40 | 76% | 1.2 m | 30% |
+
+At 0.25 the fused ball (`src/ball_fuse.py`: ATD first, detector otherwise) should take graded-frame
+visibility from 59% to ~78%. Inference over the whole match ≈ 2.5 h on the laptop (MPS), 4x2 tiles
+of 640 px per frame. Weights `src/ball_yolov8n.pt`; detections `eda/out/ball/detections.npz` and
+bucket `derived/ball_detections.npz`. Next: re-run v2 / PathCRF stitching on the fused ball and
+retrain v2 with DFL ball degraded to ~78% instead of 57%.
+
+## Ball fusion result (2026-10-27): negative, parked
+Full-match inference: 167,896 detections (2 h 23 min, MPS). Against the ATD ball on frames that
+have one, gross errors are common: >5 m off for 42% of detections at conf 0.25-0.4, 24% at
+0.6-0.8, 7% above 0.8. A temporal-support filter (`ball_fuse.support`: neighbours within ±5
+frames that lie within 1.5 m/frame) separates real tracks from jumps, but even 10/10-consistent
+detections are >5 m off 12% of the time, and 80% of fills on ATD-missing frames sit in long
+gaps (dead-ball stretches) with no ATD ball within 2 s to check against.
+
+Public window (sanity only; it already has an ATD ball on 88% of frames, fills touch 7%):
+
+| ball | DFL train visibility | spellF1 | macroF1 | D frames predicted (GT 1469) |
+|---|---|---|---|---|
+| ATD only (v3) | 0.57 | 0.391 | 0.686 | 466 |
+| ATD only | 0.78 | 0.400 | 0.676 | – |
+| fused, conf 0.25 | 0.57 | 0.400 | 0.602 | 76 |
+| fused, conf 0.25 | 0.78 | 0.372 | 0.561 | – |
+| fused, conf 0.5 + support 10/10 | 0.57 | 0.373 | 0.656 | – |
+
+Fills land on dead-ball frames (17% of GT-dead frames get one) and turn D into H/A; the dead
+class collapses. Training visibility is irrelevant (0.57 vs 0.78 within noise). Conclusion: the
+detector's precision is not good enough to feed the ball features; same verdict as the
+broadcast-ball fusion. Kept: `src/ball_fuse.py` (support filter, `--source tactical_fused` on
+`src/v2.py` and `src/pathcrf_io.py`), weights and detections in the bucket, for anyone who wants
+to retrain the detector with more data (SoccerNet Tracking) and try again.
+
+## BiGRU sequence model (`src/seq.py`, 2026-10-27)
+BiGRU (hidden 64, 30-s windows) over the 46 v3 per-frame features, trained on the 7 DFL matches
+(ball degraded to 0.57, H/A mirrored), 8 epochs, log-softmax as Viterbi emissions. Leave-one-
+match-out on DFL (pod, CPU, ~3 h): **spellF1 0.603 / macroF1 0.914** at switch 3 (0.598 at 6,
+0.590 at 10), vs HGB v3 0.56 / 0.91 and v2 0.50 / 0.89. Frame accuracy 0.92-0.94 per match.
+BAR-ATH public window (sanity only): switch 3 -> 0.474 / 0.674, 21 spells; switch 6 or 10 ->
+0.500 / 0.669, 19 spells (GT 17). Unlike v3 it does not fragment our match. Model committed as
+`src/seq_model.pt`; `--train` regenerates it in ~25 min on the laptop. Result files
+`evaluation/results/seq.csv` (switch 3, the DFL-chosen value) and `seq_sw{6,10}.csv`.
+Also: DFL CV with ball visibility 0.78 instead of 0.57 for the HGB: 0.558 / 0.910, i.e. unchanged.
+PathCRF with the BiGRU's dead labels instead of v2's (`pathcrf_run.py --alive seq.csv`, absolute
+paths, pathcrf venv): public window 0.587 / 0.701, 28 spells vs 0.615 / 0.716, 24 spells with v2.
+Within noise; v2 stays the dead-ball source for PathCRF.

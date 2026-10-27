@@ -80,3 +80,4 @@ data_raw/
 eda/out/
 eda/audio/
 eda/*.npz
+yolov8n.pt

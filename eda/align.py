@@ -6,6 +6,9 @@
 The LaLiga clock runs continuously, so within a half tactical_frame = kickoff + 25*(clock - half_start)
 and the only unknown per half is the broadcast->clock offset. Writes eda/out/ocr/clock_ocr.csv (all
 reads) and eda/align.json (two offsets + residual stats; derived constants, fine to commit).
+The clock gives the offset to +-0.5 s; eda/align.json then holds a frame-exact refinement from the
+broadcast-ATD vs tactical-ATD ball agreement (offset_clock = before, offset = after). --refit only
+redoes the clock fit, so re-run the ball refinement (see NOTES.md) after it.
 """
 import csv, json, os, re, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
