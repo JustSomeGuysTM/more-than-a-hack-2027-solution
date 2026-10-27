@@ -238,3 +238,19 @@ hint that the touch features behave differently on our tracklets (46 slots, ~20.
 switches) than on DFL's clean 22 tracks. **v2 stays the submission candidate** until the external
 validation also degrades the *player* tracking to BAR-ATH-like quality (drop ~7% of player
 observations, add ID churn) -- that is the honest way to pick between them.
+
+## PathCRF (KDD 2026, github.com/hyunsungkim-ds/pathcrf) — first honest number (2026-10-26)
+Cloned to `~/pathcrf` (own venv: torch, torch_geometric, rdp). Its training data *is* the DFL open
+dataset (raw XML linked in from floodlight's cache, `datatools/preprocess.py` run). Authors' pretrained
+checkpoint `saved/140` (leave-one-match-out, held-out = J03WR9) run on that match, 70 s on CPU.
+It predicts the possession edge (carrier -> receiver) from **player tracking only, no ball**.
+
+| J03WR9 held out, GT dead frames substituted for both | spellF1 | macroF1 | spells (gt 370) | team acc alive |
+|---|---|---|---|---|
+| GBDT v3 trained on the other 6 | 0.57 | 0.93 | 278 | 0.90 |
+| **PathCRF** pretrained | **0.69** | **0.95** | **366** | **0.93** |
+
+PathCRF gets the possession *structure* right (366 vs 370 spells) where our model merges short
+possessions. It does not model dead balls -> pair it with our D detector. Open problem: it wants
+11 identified players per team; BAR-ATH has 46 tracklet slots with ID churn (see src/pathcrf_io.py
+once written). One-line patch applied in `~/pathcrf/inference.py` (pandas read-only arrays).
