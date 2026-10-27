@@ -152,3 +152,25 @@ format in stoppage time (reads stop at 44:50 / ~96:00) but the offset still appl
 Use: `from eda.align import b2t; b2t(broadcast_seconds) -> tactical frame or None`. Constants in
 `eda/align.json`; reads in `eda/out/ocr/clock_ocr.csv`. Tactical kickoffs confirmed from the ball
 leaving the centre spot at frames 11185 and 113742.
+
+## Possession v1 (`src/possession.py`, 2026-10-26)
+Ball gap fill (≤2 s linear) -> per-frame evidence (H/A: `(8 m - dist to nearest player of that
+team)`, D: off pitch / outside halves / ball missing / ball lying still away from everyone) ->
+Viterbi over {H,A,D} with a switch penalty. numpy only, ~1 s for the whole match.
+Tuned on **Metrica sample games 1+2** (`src/external.py`, labels derived from their event stream,
+ball hidden to BAR-ATH-like 35% visibility), never on the public window.
+
+| | spellF1 | macroF1 | spells (gt) |
+|---|---|---|---|
+| Metrica 1+2 degraded, organisers' baseline_smooth50 | 0.13 | 0.48 | 470 (346) |
+| Metrica 1+2 degraded, **v1** | **0.45** | 0.67 | 254 (346) |
+| BAR-ATH public 5 min, baseline_smooth50 (official scorer) | 0.33 | 0.62 | 26 (17) |
+| BAR-ATH public 5 min, **v1** (sanity only) | **0.37** | 0.67 | 22 (17) |
+
+Still under-predicting spell count (misses short possessions) and D is rule-only. Next: DFL open
+data as a second, better-labelled validation set (`src/external.py:dfl`), smart-tagging set pieces
+and the whistle/commentary cues into the D evidence, touch-based switches instead of distance.
+
+**S3:** my IAM user (`Eli-more-than-a-hack`) has no `s3:PutObject` on the bucket, so external data
+is local only (`data_raw/external/`, gitignored) until Brandon grants write. Planned layout:
+`s3://more-than-a-hack-2027/external/{metrica-sample,dfl}/`.
