@@ -13,7 +13,8 @@ from src.features import features
 from src.possession import viterbi, score, LAB, min_dead
 from src.v2 import IDS, dfl_game, mirror
 import torch, torch.nn as nn
-MODEL = os.path.join(ROOT, "src/seq_model.pt"); WIN = 750; HID = 64   # 30 s windows at 25 fps
+MODEL = os.path.join(ROOT, "src/seq_model.pt"); WIN = 750; HID = 64
+FOLDS = os.path.join(ROOT, "eda/out/seq_folds.npz"); HGB_FOLDS = os.path.join(ROOT, "eda/out/dead_folds_carry2.npz")   # eda/dead_diag.py TAG=_carry2   # 30 s windows at 25 fps
 DEV = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 S = dict(temp=1.0, switch=3.0, switch_d=3.0)   # DFL leave-one-out, 8 epochs (pod, 2026-10-27): switch 3 -> spellF1 0.603 / macroF1 0.914, 6 -> 0.598, 10 -> 0.590, 15 -> 0.577
 
@@ -60,9 +61,22 @@ def cv(epochs):
         games = [dfl_game(m, k) for k, m in enumerate(IDS) if m != held]; _, names = features(games[0], (105.0, 68.0))
         net = fit(games, epochs, names); d = dfl_game(held, 99); X, _ = features(d, (105.0, 68.0)); lp = logp(net, X)
         folds.append((d["labels"], lp)); print(held, "frame acc %.3f" % (LAB[lp.argmax(1)] == d["labels"]).mean(), flush=True)
+    np.savez(FOLDS, labels=np.array([l for l, _ in folds], dtype=object), logp=np.array([lp for _, lp in folds], dtype=object))
+    report("BiGRU", folds)
+    if os.path.exists(HGB_FOLDS):                                 # same held-out matches, same seed 99 -> same augmented ball
+        z = np.load(HGB_FOLDS, allow_pickle=True); hgb = list(z["logp"])
+        report("BiGRU H/A + HGB D", [(l, combine(lp, h)) for (l, lp), h in zip(folds, hgb)])
+        report("mean log-prob", [(l, (lp + h) / 2) for (l, lp), h in zip(folds, hgb)])
+
+def report(name, folds):
     for sw in (3, 6, 10, 15):
         r = [score(l, decode(lp, dict(S, switch=sw, switch_d=sw))) for l, lp in folds]
-        print(f"switch={sw:2d}: spellF1={np.mean([x['spell_f1_mean'] for x in r]):.3f} macroF1={np.mean([x['macro_f1'] for x in r]):.3f} spells={np.mean([x['n_pred_spells'] for x in r]):.0f}")
+        print(f"{name:18s} switch={sw:2d}: spellF1={np.mean([x['spell_f1_mean'] for x in r]):.3f} macroF1={np.mean([x['macro_f1'] for x in r]):.3f} spells={np.mean([x['n_pred_spells'] for x in r]):.0f}")
+
+def combine(lp_seq, lp_hgb):
+    """BiGRU decides H vs A, HGB decides alive vs dead: P(D)=P_hgb(D), P(H)=P_hgb(alive)*P_seq(H|alive)."""
+    alive = np.logaddexp(lp_hgb[:, 0], lp_hgb[:, 1]); ha = lp_seq[:, :2] - np.logaddexp(lp_seq[:, 0], lp_seq[:, 1])[:, None]
+    return np.column_stack([alive[:, None] + ha, lp_hgb[:, 2]])
 
 def train(epochs):
     games = [dfl_game(m, k) for k, m in enumerate(IDS)]; _, names = features(games[0], (105.0, 68.0)); net = fit(games, epochs, names)

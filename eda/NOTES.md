@@ -60,8 +60,10 @@ BiGRU with the augmentation (DFL CV, held-out augmented): **0.582 / 0.907** at s
 on the same setup; `src/seq_model.pt` retrained (2026-10-28). Public window (sanity): BiGRU alone 0.644 / 0.760, 19 spells,
 but its dead balls are weaker than the HGB's (758 D frames of 1469, onset +3.8 s, offset -2.1 s, dead-frame F1 0.925 vs 0.954),
 and as PathCRF's dead source it scores 0.545 / 0.763 vs 0.622 / 0.853 with the HGB. **HGB stays the dead-ball source**;
-the BiGRU is the standalone fallback candidate. Untested: BiGRU H/A emissions + HGB D emissions in one decode (needs the
-BiGRU fold log-probs cached in `seq.cv`, ~3 h).
+the BiGRU is the standalone fallback candidate. Tested 2026-10-28 (`seq.py --cv` now caches fold log-probs in `eda/out/seq_folds.npz` and
+scores the combinations against `dead_folds_carry2.npz`): BiGRU alone 0.585 / 0.904; BiGRU H/A + HGB D (`seq.combine`)
+0.575 / 0.901; mean of the two log-prob sets 0.584 / 0.907 (switch 6). No gain: the BiGRU's own dead balls are as good as
+the HGB's on DFL, and the public-window gap between them is window noise. Negative result; the BiGRU stays standalone.
 Old results kept: `evaluation/results/pathcrf_v2dead.csv` (PathCRF + v2 dead, 0.615 / 0.716).
 
 ### Ball detector re-test after the dead-ball fix (2026-10-27)
