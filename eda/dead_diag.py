@@ -6,6 +6,7 @@ import os, sys, numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from src.v2 import IDS, dataset, fit, dfl_game, decode, V
 import src.v2 as v2
+TRAIN_DEGRADE = os.environ.get("TRAIN_DEGRADE", "real")   # degradation for the training matches; the held-out match always gets the real one
 FILLS = os.environ.get("FILLS", "0")   # 0 | 1 (train and test with simulated detector fills) | test (fills on the held-out match only)
 from src.features import features
 from src.possession import score, LAB
@@ -30,7 +31,7 @@ def folds():
         z = np.load(CACHE, allow_pickle=True); return list(zip(z["labels"], z["logp"]))
     out = []
     for held in IDS:
-        v2.FILLS = FILLS == "1"; X, y, _ = dataset([m for m in IDS if m != held])
+        v2.FILLS = FILLS == "1"; v2.DEGRADE = TRAIN_DEGRADE; X, y, _ = dataset([m for m in IDS if m != held]); v2.DEGRADE = "real"
         if PFF: Xp, yp = pff_train(PFF); X, y = np.concatenate([X, Xp]), np.concatenate([y, yp])
         clf = fit(X, y); v2.FILLS = FILLS in ("1", "test"); d = dfl_game(held, 99); Xh, _ = features(d, (105.0, 68.0))
         out.append((d["labels"], np.log(clf.predict_proba(Xh).clip(1e-4, 1)))); print(held, flush=True)

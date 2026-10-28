@@ -107,6 +107,13 @@ def degrade_ball(d, visible=None, seed=0):
         on, off = draw(r, BALL_SEEN, 1)[0], draw(r, BALL_GAP, 1)[0]; b[i + on:i + on + off] = np.nan; i += on + off
     out["ball"] = b; out["ball_true"] = d["ball"]; return out
 
+def degrade_ball_geom(d, visible=0.57, seed=0):
+    """The pre-2026-10-28 degradation (geometric gaps, mean 1 s): kept for the train-old/test-real comparison in eda/dead_diag.py."""
+    r = np.random.default_rng(seed); F = len(d["ball"]); out = dict(d); b = d["ball"].copy(); i = 0
+    while i < F:
+        on = r.geometric(1 / (25 * visible / (1 - visible))); off = r.geometric(1 / 25); b[i + on:i + on + off] = np.nan; i += on + off
+    out["ball"] = b; out["ball_true"] = d["ball"]; return out
+
 def degrade_players(d, seed=0):
     """Untrack players the way the BAR-ATH tracklets do: alternating good stretches (all 22) and bad stretches (1-8 players
     missing for the whole stretch). Identity swaps are not simulated: slots never change team in the ATD and our features

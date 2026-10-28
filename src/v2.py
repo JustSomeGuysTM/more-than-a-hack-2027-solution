@@ -13,9 +13,10 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from src.features import features
 from src.possession import viterbi, score, LAB, min_dead
-from src.external import degrade_ball, degrade_players, dead_ball_carry, simulate_detector
+from src.external import degrade_ball, degrade_ball_geom, degrade_players, dead_ball_carry, simulate_detector
 IDS = ["J03WMX", "J03WN1", "J03WOH", "J03WOY", "J03WPY", "J03WQQ", "J03WR9"]
 MODEL = os.path.join(ROOT, "src/v2_model.pkl")
+DEGRADE = os.environ.get("DEGRADE", "real")   # real (measured ATD gap structure + player dropout) | old (geometric 1-s ball gaps, full players)
 FILLS = os.environ.get("FILLS", "0") == "1"   # simulate_detector fills on the degraded DFL ball (fused-ball pipeline)
 CARRY = os.environ.get("CARRY", "1") == "1"   # dead_ball_carry on DFL dead frames (eda/dead_diag.py, 2026-10-27)
 VISIBLE = 0.57   # ATD ball visibility on graded frames; 0.78 after ball_fuse.py (detector fills gaps)
@@ -23,14 +24,16 @@ V = dict(temp=1.0, switch=10.0, switch_d=10.0)      # DFL leave-one-out: v2 spel
 
 def dfl_game(mid, seed):
     z = np.load(os.path.join(ROOT, f"data_raw/external/dfl_{mid}.npz")); d = {q: z[q] for q in z.files}; d["fps"] = 25
-    d = degrade_players(degrade_ball(dead_ball_carry(d, seed) if CARRY else d, seed=seed), seed)
+    d = dead_ball_carry(d, seed) if CARRY else d
+    d = degrade_ball_geom(d, seed=seed) if DEGRADE == "old" else degrade_players(degrade_ball(d, seed=seed), seed)
     return simulate_detector(d, seed) if FILLS else d
 
 def pff_game(gid, seed=0, labels="rule"):
     """PFF WC22 cache as a training game: same degradation as DFL; labels 'rule' (src/pff.py) or 'teacher' (src/label_transfer.py)."""
     z = np.load(os.path.join(ROOT, f"data_raw/external/pff_{gid}.npz"), allow_pickle=True); d = {q: z[q] for q in ("players", "ball", "team", "labels", "period")}; d["fps"] = 25
     if labels == "teacher": d["labels"] = np.load(os.path.join(ROOT, f"data_raw/external/pff_labels2_{gid}.npy"), allow_pickle=True)
-    d = degrade_players(degrade_ball(dead_ball_carry(d, seed) if CARRY else d, seed=seed), seed); return d
+    d = dead_ball_carry(d, seed) if CARRY else d
+    d = degrade_ball_geom(d, seed=seed) if DEGRADE == "old" else degrade_players(degrade_ball(d, seed=seed), seed); return d
 
 def mirror(X, names):
     """Swap home and away columns, negate the differences."""

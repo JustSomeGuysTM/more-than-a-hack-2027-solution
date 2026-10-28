@@ -130,6 +130,14 @@ switch 10 (temp 0.5 / switch 6 is 0.440, noise). Oracle dead balls would give 0.
 by up to 2.3 s (p90) and 36 of 711 stoppages are missed -- the yardstick now shows the dead-ball lateness we see on
 BAR-ATH, so a dedicated alive/dead model can be judged here (TODO item 2). Public-window numbers are optimistic relative
 to the whole match: the ball is visible on 94% of its alive frames vs 59% over the graded match.
+BiGRU under the realistic degradation: **0.464 / 0.839** (switch 3; old yardstick 0.585 / 0.904), still ahead of the HGB
+(0.438 / 0.828). Combinations on the same folds: BiGRU H/A + HGB D 0.453 / 0.834; mean of the two log-prob sets
+0.470 / 0.844 (switch 6) -- +0.006 over the BiGRU alone, inside fold noise, not adopted. (An earlier run of this
+comparison mixed old-yardstick HGB folds with new-yardstick BiGRU folds and printed 0.564; discard.)
+Deployed models retrained on the realistic degradation (2026-10-28): HGB public window 0.440 / 0.809 (old-degradation
+model: 0.537 / 0.834), PathCRF + HGB dead 0.582 / 0.827 (was 0.622 / 0.853). The window has an almost complete ball, so
+a model trained for 1-s gaps suits it better; whether that holds over the full match is what `TRAIN_DEGRADE=old` in
+`eda/dead_diag.py` tests (train on the old degradation, test on the real one).
 
 ### Goalkeeper for PathCRF: already handled (2026-10-28)
 PathCRF finds the keeper itself per episode (`datatools/utils.detect_keepers`: the player whose mean x is farthest from
