@@ -104,6 +104,13 @@ Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc 
 Authors' checkpoint 140 is itself a leave-one-out fold (`--lomocv --cv_fold_idx 6`: held-out J03WR9, val J03WQQ, 5 training
 matches, batch 32, 50 epochs, seed 100; everything else identical to ours), so it *is* documentable: public DFL only.
 Its own held-out score with this scorer: 0.727 / 0.949 (335 spells, gt 370). Direct comparison comes from our trial 206.
+Fold 1 (trial 201, held-out J03WN1, 2026-10-28 13:50 UTC): **0.579 / 0.905**, 427 spells (gt 500), alive frame acc 0.858;
+authors' 140 on the same match (in its training set) 0.717 / 0.939. HGB (realistic degradation, GT dead) on the same matches for scale:
+
+| fold | held out | PathCRF ours (GT dead) | HGB real-degradation (GT dead) |
+|---|---|---|---|
+| 0 | J03WMX | 0.608 / 0.933 | 0.451 / 0.870 |
+| 1 | J03WN1 | 0.579 / 0.905 | 0.442 / 0.853 |
 Incident: the queue stalled 1 h after fold 0 because two stale watcher shells whose command lines contained `train.py`
 kept `pgrep -f train.py` true; killed, folds 1-6 running. Fold logs: `pod/logs/`.
 
