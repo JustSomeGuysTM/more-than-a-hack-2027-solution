@@ -59,6 +59,15 @@ dead-frame F1 0.92 -> 0.95, D onsets still ~3 s late (the last open dead-ball is
 BiGRU CV with the augmentation is running (`eda/out/seq_cv_carry2.log`); `src/seq_model.pt` to be retrained after.
 Old results kept: `evaluation/results/pathcrf_v2dead.csv` (PathCRF + v2 dead, 0.615 / 0.716).
 
+### Ball detector re-test after the dead-ball fix (2026-10-27)
+The fusion failed before because fills on dead frames turned D into H/A; with `dead_ball_carry` the model no longer reads a
+moving ball as "alive", so the same detections (`--source tactical_fused`, conf 0.25) now help on the public window (sanity):
+HGB 0.537 / 0.834 / 18 spells -> **0.544 / 0.865 / 19**, dead-frame F1 0.954 -> 0.967; PathCRF (stitched on the fused ball)
++ fused dead balls **0.664 / 0.880 / 27** vs 0.622 / 0.853 unfused (`evaluation/results/pathcrf_fused.csv`). Retraining
+the HGB at visibility 0.78 fragments again (0.417, 31 spells): keep 0.57. Still no honest validation of the fused ball
+(DFL has no detector noise); within the window's ±0.05 noise band. Next if pursued: SoccerNet Tracking ball boxes to
+retrain the detector, and a detector-noise simulator on DFL so the choice can be made on CV.
+
 ## The task in one line
 One LaLiga match (Barcelona vs Athletic, 2024-25 MD2). For each of the 199,319 frames of the
 tactical video (25 fps) output `H` (Barça has ball), `A` (Athletic has ball), `D` (dead ball),
