@@ -1,5 +1,5 @@
 """Label transfer: learn DFL's official per-frame possession/ballstatus labels from *clean* tracking + the event stream
-(a "teacher" HGB), then label the PFF World Cup matches with it instead of the hand rule (which only reproduces the
+(a "teacher" HGB; DFL ball given BAR-ATH/PFF-like gaps and a moving dead ball so the teacher leans on the events), then label the PFF World Cup matches with it instead of the hand rule (which only reproduces the
 official DFL labels at spellF1 0.73-0.76 when applied to DFL's own events, eda/NOTES.md 2026-10-28).
 
     .venv/bin/python src/label_transfer.py --cv       # teacher leave-one-match-out on DFL vs official labels
@@ -12,6 +12,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.ins
 from src.features import features
 from src.possession import score, LAB
 from src.v2 import IDS, fit, mirror, decode, V
+from src.external import dead_ball_carry, degrade_ball
 SW = 6   # teacher Viterbi switch: DFL LOMO grid 1/2/3/6/10 -> spellF1 0.737/0.747/0.751/0.756/0.756 vs official, macroF1 0.953 throughout; 6 keeps the spell count closest (393 vs 437)
 PC = os.path.expanduser("~/pathcrf/data/sportec"); EXT = os.path.join(ROOT, "data_raw/external"); MODEL = os.path.join(ROOT, "src/teacher.pkl")
 ONBALL = {"pass", "control", "interception", "clearance", "throw_in", "bad_touch", "tackle", "dispossessed", "cross", "shot", "shot_freekick", "freekick_short", "goalkick", "ball_recovery", "corner_short", "corner_crossed", "freekick_crossed", "keeper_claim", "keeper_pick_up", "keeper_punch", "keeper_save", "keeper_sweeper", "shot_block", "take_on", "dribble", "carry", "touch"}
@@ -20,6 +21,7 @@ DEAD = {"out", "foul", "goal", "offside", "whistle", "end", "substitution"}
 def dfl(mid):
     """Clean DFL match dict + event instants: (frame, team 0/1) for on-ball events, frames of dead-type events, period starts."""
     z = np.load(f"{EXT}/dfl_{mid}.npz"); d = {q: z[q] for q in z.files}; d["fps"] = 25
+    d = degrade_ball(dead_ball_carry(d, seed=hash(mid) % 1000), seed=hash(mid) % 1000)   # v1 (clean, frozen dead ball) labelled 0% of PFF frames dead: PFF's ball is missing/moving while dead
     tr = pd.read_parquet(f"{PC}/tracking_processed/{mid}.parquet", columns=["frame_id", "period_id"]); ev = pd.read_parquet(f"{PC}/event_processed/{mid}.parquet")
     pos = {f: i for i, f in enumerate(tr["frame_id"].values)}; on, dead = [], []
     for f, t, p in zip(ev["frame_id"], ev["event_type"], ev["player_id"]):

@@ -28,9 +28,11 @@ Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and
    right, the stoppage start is not. Ideas: ball speed-jump / ball-off-pitch features with longer memory, or a dedicated
    alive/dead BiGRU with 60-s windows trained on augmented DFL.
 3. **Ensemble** the HGB and BiGRU log-probabilities before Viterbi (cheap, DFL CV decides).
-4. **Honest model selection**: degrade DFL *player* tracking to BAR-ATH quality (drop ~7% of observations,
-   add slot/ID churn) so v2-vs-v3-vs-BiGRU can be chosen on DFL instead of the 5-min window.
-5. **PathCRF goalkeeper identity**: the model expects it; infer the keeper per team from position (deepest player).
+4. ~~Honest model selection~~ done: `degrade_ball` / `degrade_players` from measured ATD statistics (see "Make DFL look
+   like BAR-ATH"); all CV numbers from 2026-10-28 on use it.
+5. ~~PathCRF goalkeeper identity~~ done: PathCRF detects it itself, verified on our tracks (see below).
+6. ~~Label transfer for PFF~~ done, negative for the frame models (see "Label transfer"); open: feed the teacher labels into
+   the PFF parquets for PathCRF training.
 
 ## Dead-ball fix: DFL freezes the ball, BAR-ATH does not (`eda/dead_diag.py`, 2026-10-27)
 Diagnostic on the 7 DFL folds (HGB v3): perfect dead frames would lift spellF1 only 0.557 -> 0.569, stoppage onsets/offsets
@@ -133,6 +135,26 @@ to the whole match: the ball is visible on 94% of its alive frames vs 59% over t
 PathCRF finds the keeper itself per episode (`datatools/utils.detect_keepers`: the player whose mean x is farthest from
 the centre), in training and in inference. On our stitched tracks it picks a track 44.5 m from the centre at the median
 (DFL: 41.3 m), present for the whole episode in every case, 5% of episodes below 30 m (DFL 2%). Nothing to add.
+
+## Label transfer: learned PFF labels (`src/label_transfer.py`, 2026-10-28) -- PFF still does not help the frame models
+Diagnosis: the hand rule that turns on-ball events into H/A/D, applied to DFL's *own* event stream, reproduces the official
+DFL labels at only frame acc 0.89-0.92, spellF1 0.73-0.76, macroF1 0.88-0.92 (3 matches). So the rule, not PFF, was the
+weak link. Teacher = HGB on the v3 tracking features (DFL ball given the real gap structure + moving dead ball, players
+clean like PFF's) plus 9 event features (seconds since/until the nearest on-ball instant and its team, since/until
+dead-type events, since period start), Viterbi switch 6 + min_dead. DFL leave-one-out vs official labels:
+**frame acc 0.96, spellF1 0.752, macroF1 0.949** (v1 with a clean frozen ball: 0.756 / 0.953, but it labelled 0% of PFF
+frames dead). PFF relabelled (`data_raw/external/pff_labels2_<gid>.npy`): dead fraction 0.30-0.41 (rule 0.34-0.70; the
+rule over-deads some games), 516-644 label changes per match (DFL 460-613).
+
+| HGB v3 training set (realistic degradation, DFL LOMO) | spellF1 / macroF1 |
+|---|---|
+| 6 DFL | 0.438 / 0.828 |
+| 6 DFL + 64 PFF, rule labels | 0.429 / 0.829 |
+| 6 DFL + 64 PFF, teacher labels | 0.431 / 0.831 |
+
+Neutral: ten times more matches with decent labels do not move the frame model, so data volume is not its bottleneck.
+PFF stays out of HGB/BiGRU training; it stays in for PathCRF (GPU ablation fold, trial 300). The teacher is kept
+(`src/teacher.pkl`) for anyone who wants PFF labels in DFL's definition, e.g. for PathCRF's `ball_owning_team_id`.
 
 ## The task in one line
 One LaLiga match (Barcelona vs Athletic, 2024-25 MD2). For each of the 199,319 frames of the

@@ -57,7 +57,7 @@ model's label (H / A / D). `X` is never emitted on graded frames.
 |---|---|---|---|---|
 | DFL / IDSSE open dataset | github.com/floodlight-sports (CC-BY 4.0) | DFL official per-frame `possession` and `ballstatus` codes (human-validated event feed) | 7 Bundesliga matches 2022/23, 25 Hz, ~2.0 M frames after home/away mirroring | training + leave-one-match-out CV of the HGB, BiGRU and PathCRF; choice of switch penalties |
 | Metrica Sports sample data | github.com/metrica-sports/sample-data | team possession derived by us from Metrica's human-coded events | games 1+2, ~0.3 M frames | held-out sanity check only (never trained on) |
-| PFF FC World Cup 2022 | PFF FC public release (free sign-up) | algorithmic labels written by us from PFF's human-coded on-ball events (rule in `src/pff.py`) | 64 matches, 25 fps resampled, ~10 M frames | PathCRF training only (DFL+PFF variant); **TODO(gpu)** kept or dropped per fold results |
+| PFF FC World Cup 2022 | PFF FC public release (free sign-up) | algorithmic labels written by us from PFF's human-coded on-ball events (rule in `src/pff.py`) | 64 matches, 25 fps resampled, ~10 M frames | PathCRF training only (DFL+PFF variant); **TODO(gpu)** kept or dropped per fold results. Also relabelled by a teacher model trained on DFL (`src/label_transfer.py`), tested for the frame models and dropped |
 | PathCRF authors' checkpoint `saved/140` | github.com/hyunsungkim-ds/pathcrf (KDD 2026) | trained by the authors on the same DFL open dataset (leave-one-out, held-out J03WR9) | — | reference only; the submitted model is our own retraining (trial 400) |
 | SoccerNet-Echoes + SoccerNet labels | github.com/SoccerNet | Whisper transcripts; SoccerNet human action labels | 330 matches | commentary stoppage model (dropped, see §5) |
 | BAR–ATH tactical ATD | provided | automatic | — | inference only; also the source of algorithmic ball-detector tiles (dropped, §5) |
@@ -73,7 +73,7 @@ BAR–ATH's gap statistics (57% visible) and home/away are mirrored.
 | commentary stoppage model | TF-IDF + logistic regression trained on SoccerNet-Echoes vs SoccerNet stoppage labels (other games) | held-out AUC 0.57; too weak to add as a decode-time prior |
 | own ball detector (YOLOv8n on tactical frames, labels projected from the ATD ball, no human labels) | fills ball gaps from 59% to ~78% visibility | neutral once judged honestly: a simulator of the detector's error profile on the DFL leave-one-out moves spellF1 by +0.006 at best, and reproduction would need a 2.5-h detector pass |
 | smart tagging | SET PIECES windows as dead-ball evidence | only 56% of their frames are dead; no restart moment readable |
-| PFF for the HGB / BiGRU | added 64 matches to training | hurts held-out DFL (0.56 → 0.55 and 0.55 → 0.50 spellF1): our PFF possession rule differs from DFL's |
+| PFF for the HGB / BiGRU | added 64 matches to training, first with a hand event-to-label rule, then with labels from a teacher model trained on DFL to reproduce the official labels (0.75 / 0.95 vs official) | neutral on held-out DFL (0.438 → 0.429 rule, 0.431 teacher): data volume is not the frame model's bottleneck |
 
 ## 6. Results (held-out external matches; public 5 min reported as sanity only)
 | model | DFL leave-one-match-out spellF1 / macroF1 | public 5 min (sanity) |
