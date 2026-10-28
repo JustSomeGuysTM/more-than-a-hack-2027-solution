@@ -73,6 +73,20 @@ def dead_ball_carry(d, seed=0, sigma=2.0, step=0.05, p_carry=0.6):
         else: b[s:e, :2] = b[s, :2] + walk
     out["ball"] = b; return out
 
+def simulate_detector(d, seed=0, fill=0.18, run_mean=7, p_gross=0.11, sigma=0.65):
+    """Our YOLO ball detector (src/ball_detect.py) run through ball_fuse (conf 0.5, support 10/10) fills ~18% of the ATD's
+    missing graded frames in runs of median 3 / p90 20 frames; accepted detections are 0.77 m off at the median and >5 m
+    off 11% of the time, in runs of ~3 frames (eda/NOTES.md 2026-10-27). Reproduce that on a degraded DFL ball so fused-ball
+    pipelines can be judged on DFL leave-one-out instead of the public window. Call after degrade_ball; d must still carry
+    the true ball as d["ball_true"]."""
+    r = np.random.default_rng(seed + 7); out = dict(d); b = d["ball"].copy(); t = d["ball_true"]; hidden = ~np.isfinite(b[:, 0]) & np.isfinite(t[:, 0]); F = len(b)
+    starts = hidden & (r.random(F) < fill / run_mean)
+    for s in np.where(starts)[0]:
+        e = min(F, s + r.geometric(1 / run_mean)); seg = slice(s, e); m = hidden[seg]
+        err = r.normal(0, sigma, 2) if r.random() >= p_gross else r.normal(0, 1, 2) / np.sqrt(2) * r.uniform(5, 20)
+        idx = np.where(m)[0] + s; b[idx, :2] = t[idx, :2] + err; hidden[seg] = False
+    out["ball"] = b; return out
+
 def degrade_ball(d, visible=0.57, seed=0):
     """Hide the ball with BAR-ATH-like gaps (mean gap ~1 s, geometric) so a model trained here does
     not learn to trust a ball it will not see. ponytail: gap stats are a guess; fit to the ATD later."""
@@ -80,7 +94,7 @@ def degrade_ball(d, visible=0.57, seed=0):
     while i < F:
         on = r.geometric(1 / (25 * visible / (1 - visible))); off = r.geometric(1 / 25)
         b[i + on:i + on + off] = np.nan; i += on + off
-    out["ball"] = b; return out
+    out["ball"] = b; out["ball_true"] = d["ball"]; return out
 
 if __name__ == "__main__":
     d = metrica(1); L = d["labels"]

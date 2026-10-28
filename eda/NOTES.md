@@ -68,6 +68,21 @@ the HGB at visibility 0.78 fragments again (0.417, 31 spells): keep 0.57. Still 
 (DFL has no detector noise); within the window's ±0.05 noise band. Next if pursued: SoccerNet Tracking ball boxes to
 retrain the detector, and a detector-noise simulator on DFL so the choice can be made on CV.
 
+### Detector-noise simulator on DFL: the fused ball is neutral (2026-10-27)
+`src/external.simulate_detector` (FILLS=1 for `src/v2.py` / `eda/dead_diag.py`) reproduces our detector on a degraded DFL ball:
+fills ~14% of hidden frames in runs of p50 4 / p90 14 frames, errors p50 0.8 m, 6.5% > 5 m (targets from the real detections:
+18%, 3 / 20 frames, 0.77 m, 11%). HGB leave-one-out, augmented dead ball, min_dead 3 s:
+
+| DFL ball | train | spellF1 / macroF1 |
+|---|---|---|
+| degraded only (= current pipeline) | no fills | 0.532 / 0.893 |
+| degraded + simulated fills | with fills | 0.538 / 0.894 |
+| degraded + simulated fills | no fills (what gave 0.664 on the public window) | 0.530 / 0.889 |
+
++0.006 at best, inside fold noise. The public-window gain (0.622 -> 0.664) is not supported by the honest check, and the
+fused pipeline costs a 2.5-h detector pass for anyone reproducing the CSV. **Decision: the detector stays out of the
+submission pipeline**; the simulator stays so a better detector (SoccerNet-trained) can be judged the same way.
+
 ## The task in one line
 One LaLiga match (Barcelona vs Athletic, 2024-25 MD2). For each of the 199,319 frames of the
 tactical video (25 fps) output `H` (Barça has ball), `A` (Athletic has ball), `D` (dead ball),

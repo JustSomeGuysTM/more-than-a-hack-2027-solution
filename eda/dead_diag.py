@@ -5,6 +5,8 @@ oracle-D upper bound, D onset/offset lag, missed stoppages by duration, switch_d
 import os, sys, numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from src.v2 import IDS, dataset, fit, dfl_game, decode, V
+import src.v2 as v2
+FILLS = os.environ.get("FILLS", "0")   # 0 | 1 (train and test with simulated detector fills) | test (fills on the held-out match only)
 from src.features import features
 from src.possession import score, LAB
 CACHE = os.path.join(ROOT, f"eda/out/dead_folds{os.environ.get('TAG', '')}.npz")
@@ -14,7 +16,7 @@ def folds():
         z = np.load(CACHE, allow_pickle=True); return list(zip(z["labels"], z["logp"]))
     out = []
     for held in IDS:
-        X, y, _ = dataset([m for m in IDS if m != held]); clf = fit(X, y); d = dfl_game(held, 99); Xh, _ = features(d, (105.0, 68.0))
+        v2.FILLS = FILLS == "1"; X, y, _ = dataset([m for m in IDS if m != held]); clf = fit(X, y); v2.FILLS = FILLS in ("1", "test"); d = dfl_game(held, 99); Xh, _ = features(d, (105.0, 68.0))
         out.append((d["labels"], np.log(clf.predict_proba(Xh).clip(1e-4, 1)))); print(held, flush=True)
     np.savez(CACHE, labels=np.array([l for l, _ in out], dtype=object), logp=np.array([lp for _, lp in out], dtype=object)); return out
 

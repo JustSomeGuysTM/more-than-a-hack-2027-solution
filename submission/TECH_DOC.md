@@ -71,7 +71,7 @@ BAR–ATH's gap statistics (57% visible) and home/away are mirrored.
 | broadcast video + broadcast ATD | OCR'd the scoreboard clock to align broadcast to tactical frames (±0.5 s); tried fusing the broadcast ball | broadcast ball covers 26% of graded frames and adds 2.6% new frames |
 | broadcast audio | referee-whistle detector on the Demucs crowd stem; restart words from local Whisper commentary transcripts | the crowd whistles constantly: P(dead | whistle) 0.14 vs base 0.20 |
 | commentary stoppage model | TF-IDF + logistic regression trained on SoccerNet-Echoes vs SoccerNet stoppage labels (other games) | held-out AUC 0.57; too weak to add as a decode-time prior |
-| own ball detector (YOLOv8n on tactical frames, labels projected from the ATD ball, no human labels) | fills ball gaps from 59% to ~78% visibility | fills land on dead-ball frames and collapse the D class (public window macroF1 0.69 → 0.60) |
+| own ball detector (YOLOv8n on tactical frames, labels projected from the ATD ball, no human labels) | fills ball gaps from 59% to ~78% visibility | neutral once judged honestly: a simulator of the detector's error profile on the DFL leave-one-out moves spellF1 by +0.006 at best, and reproduction would need a 2.5-h detector pass |
 | smart tagging | SET PIECES windows as dead-ball evidence | only 56% of their frames are dead; no restart moment readable |
 | PFF for the HGB / BiGRU | added 64 matches to training | hurts held-out DFL (0.56 → 0.55 and 0.55 → 0.50 spellF1): our PFF possession rule differs from DFL's |
 
