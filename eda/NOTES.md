@@ -116,6 +116,11 @@ comment admitted); `degrade_players` alternates complete stretches with stretche
 not simulated: ATD slots never change team and the features are slot-agnostic, so only presence matters (PathCRF training
 would need them; not done). Check on J03WMX after degradation: ball visible 0.597, 54% complete frames, 21.2 tracked.
 All DFL CV numbers before this section used the old degradation; new ones below are not comparable to them.
+HGB v3 under the realistic degradation: **0.438 / 0.828** (old yardstick 0.532 / 0.893); the grid still picks temp 1 /
+switch 10 (temp 0.5 / switch 6 is 0.440, noise). Oracle dead balls would give 0.474 / 0.869, stoppage onsets are now late
+by up to 2.3 s (p90) and 36 of 711 stoppages are missed -- the yardstick now shows the dead-ball lateness we see on
+BAR-ATH, so a dedicated alive/dead model can be judged here (TODO item 2). Public-window numbers are optimistic relative
+to the whole match: the ball is visible on 94% of its alive frames vs 59% over the graded match.
 
 ### Goalkeeper for PathCRF: already handled (2026-10-28)
 PathCRF finds the keeper itself per episode (`datatools/utils.detect_keepers`: the player whose mean x is farthest from
