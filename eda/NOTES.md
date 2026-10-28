@@ -1,5 +1,15 @@
 # MTAH 2027 — team notes (Elijah, Oct 25)
 
+## Reproduce PathCRF on BAR-ATH (any teammate, ~10 min + weights download)
+```bash
+pip install -r requirements.txt            # this repo's .venv, data/ unpacked as in README
+gh auth login                              # needs access to the team repo (weights live in its GitHub release `pathcrf-weights`)
+bash pod/pathcrf_setup.sh                  # clones+patches PathCRF into ~/pathcrf, venv, weights, BAR-ATH parquet, inference
+```
+Writes `evaluation/results/pathcrf.csv` (PathCRF home/away on alive frames, dead balls from our HGB) and prints the
+public-window sanity score. `TRIAL=140` runs the authors' checkpoint (shipped in their repo) instead of our trial 300.
+Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and CV numbers are in the PathCRF section below.
+
 ## The task in one line
 One LaLiga match (Barcelona vs Athletic, 2024-25 MD2). For each of the 199,319 frames of the
 tactical video (25 fps) output `H` (Barça has ball), `A` (Athletic has ball), `D` (dead ball),
