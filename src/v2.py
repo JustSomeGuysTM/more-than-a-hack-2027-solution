@@ -13,7 +13,7 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from src.features import features
 from src.possession import viterbi, score, LAB, min_dead
-from src.external import degrade_ball, dead_ball_carry, simulate_detector
+from src.external import degrade_ball, degrade_players, dead_ball_carry, simulate_detector
 IDS = ["J03WMX", "J03WN1", "J03WOH", "J03WOY", "J03WPY", "J03WQQ", "J03WR9"]
 MODEL = os.path.join(ROOT, "src/v2_model.pkl")
 FILLS = os.environ.get("FILLS", "0") == "1"   # simulate_detector fills on the degraded DFL ball (fused-ball pipeline)
@@ -23,7 +23,7 @@ V = dict(temp=1.0, switch=10.0, switch_d=10.0)      # DFL leave-one-out: v2 spel
 
 def dfl_game(mid, seed):
     z = np.load(os.path.join(ROOT, f"data_raw/external/dfl_{mid}.npz")); d = {q: z[q] for q in z.files}; d["fps"] = 25
-    d = degrade_ball(dead_ball_carry(d, seed) if CARRY else d, visible=VISIBLE, seed=seed)
+    d = degrade_players(degrade_ball(dead_ball_carry(d, seed) if CARRY else d, seed=seed), seed)
     return simulate_detector(d, seed) if FILLS else d
 
 def mirror(X, names):

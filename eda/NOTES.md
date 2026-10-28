@@ -107,6 +107,21 @@ Its own held-out score with this scorer: 0.727 / 0.949 (335 spells, gt 370). Dir
 Incident: the queue stalled 1 h after fold 0 because two stale watcher shells whose command lines contained `train.py`
 kept `pgrep -f train.py` true; killed, folds 1-6 running. Fold logs: `pod/logs/`.
 
+## Make DFL look like BAR-ATH: real gap structure + player dropout (`src/external.py`, 2026-10-28)
+Measured on the graded ATD frames: ball visible runs median 14 s (mean 25 s), ball gaps median 11 s (mean 18 s) and
+**never 1-3 s** (sub-second or 3 s+); 20.5 of 22 players tracked per frame, 52% of frames complete, missing players come in
+stretches (median 3 s, mean 10 s) of 1 (54%) to 8 players; 98% of lost player-frames are tracklet ends, not blinks.
+`degrade_ball` now draws run lengths from the ATD percentile tables (old version: geometric 1-s gaps, the guess its own
+comment admitted); `degrade_players` alternates complete stretches with stretches missing 1-8 players. Identity swaps are
+not simulated: ATD slots never change team and the features are slot-agnostic, so only presence matters (PathCRF training
+would need them; not done). Check on J03WMX after degradation: ball visible 0.597, 54% complete frames, 21.2 tracked.
+All DFL CV numbers before this section used the old degradation; new ones below are not comparable to them.
+
+### Goalkeeper for PathCRF: already handled (2026-10-28)
+PathCRF finds the keeper itself per episode (`datatools/utils.detect_keepers`: the player whose mean x is farthest from
+the centre), in training and in inference. On our stitched tracks it picks a track 44.5 m from the centre at the median
+(DFL: 41.3 m), present for the whole episode in every case, 5% of episodes below 30 m (DFL 2%). Nothing to add.
+
 ## The task in one line
 One LaLiga match (Barcelona vs Athletic, 2024-25 MD2). For each of the 199,319 frames of the
 tactical video (25 fps) output `H` (Barça has ball), `A` (Athletic has ball), `D` (dead ball),
