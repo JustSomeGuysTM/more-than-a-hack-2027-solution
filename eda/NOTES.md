@@ -137,7 +137,9 @@ comparison mixed old-yardstick HGB folds with new-yardstick BiGRU folds and prin
 Deployed models retrained on the realistic degradation (2026-10-28): HGB public window 0.440 / 0.809 (old-degradation
 model: 0.537 / 0.834), PathCRF + HGB dead 0.582 / 0.827 (was 0.622 / 0.853). The window has an almost complete ball, so
 a model trained for 1-s gaps suits it better; whether that holds over the full match is what `TRAIN_DEGRADE=old` in
-`eda/dead_diag.py` tests (train on the old degradation, test on the real one).
+`eda/dead_diag.py` tests (train on the old degradation, test on the real one): **0.416 / 0.781** with 178 false
+stoppages, vs 0.438 / 0.828 trained on the real one. Settled: the deployed HGB and BiGRU are trained on the realistic
+degradation; the public window was flattering the old model because its ball is almost complete.
 
 ### Goalkeeper for PathCRF: already handled (2026-10-28)
 PathCRF finds the keeper itself per episode (`datatools/utils.detect_keepers`: the player whose mean x is farthest from

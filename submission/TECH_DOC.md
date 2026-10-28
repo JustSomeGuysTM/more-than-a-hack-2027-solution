@@ -62,8 +62,11 @@ model's label (H / A / D). `X` is never emitted on graded frames.
 | SoccerNet-Echoes + SoccerNet labels | github.com/SoccerNet | Whisper transcripts; SoccerNet human action labels | 330 matches | commentary stoppage model (dropped, see §5) |
 | BAR–ATH tactical ATD | provided | automatic | — | inference only; also the source of algorithmic ball-detector tiles (dropped, §5) |
 
-DFL ball visibility is ~100%, so during training the ball is hidden on a schedule matching
-BAR–ATH's gap statistics (57% visible) and home/away are mirrored.
+DFL tracking is complete, so during training it is degraded to BAR–ATH's measured quality: ball
+gaps drawn from the tactical feed's run-length distribution (59% visible, gaps sub-second or 3 s+),
+1–8 players untracked in stretches (20.5 of 22 tracked per frame), a moving dead ball; home/away are
+mirrored. Training on a milder degradation looks better on the public 5 minutes (whose ball is almost
+complete) but worse on held-out DFL degraded realistically (0.42 vs 0.44 spellF1), so the realistic one is used.
 
 ## 5. Assets tried and dropped (all documented in `eda/NOTES.md`)
 | asset | what we did | why dropped |
@@ -80,10 +83,13 @@ BAR–ATH's gap statistics (57% visible) and home/away are mirrored.
 |---|---|---|
 | organisers' baseline_smooth50 | 0.12 / 0.44 | 0.33 / 0.62 |
 | HGB v2 (38 features) | 0.50 / 0.89 | 0.52 / 0.70 |
-| HGB v3 (46 features), frozen DFL dead ball | 0.56 / 0.91 | 0.39 / 0.69 |
-| HGB v3 + dead-ball augmentation + 3-s minimum (DFL held-out also augmented) | 0.53 / 0.89 | 0.54 / 0.83 |
-| BiGRU, frozen DFL dead ball | 0.60 / 0.91 | 0.47 / 0.67 |
-| BiGRU + dead-ball augmentation + 3-s minimum | 0.58 / 0.91 | 0.64 / 0.76 |
+| HGB v3 (46 features), frozen DFL dead ball, mild degradation | 0.56 / 0.91 | 0.39 / 0.69 |
+| HGB v3 + dead-ball augmentation + 3-s minimum, mild degradation | 0.53 / 0.89 | 0.54 / 0.83 |
+| **HGB v3, realistic degradation (measured ball gaps + player dropout; the yardstick from here on)** | 0.44 / 0.83 | 0.44 / 0.81 |
+| BiGRU, frozen DFL dead ball, mild degradation | 0.60 / 0.91 | 0.47 / 0.67 |
+| BiGRU + dead-ball augmentation + 3-s minimum, mild degradation | 0.58 / 0.91 | 0.64 / 0.76 |
+| **BiGRU, realistic degradation** | 0.46 / 0.84 | TODO |
+| PathCRF authors' checkpoint + HGB (realistic) dead balls | – | 0.58 / 0.83 |
 | PathCRF authors' checkpoint + v2 dead balls | 0.69 / 0.95 (one match) | 0.62 / 0.72 |
 | PathCRF authors' checkpoint + augmented HGB dead balls | – | 0.62 / 0.85 |
 | **PathCRF ours, DFL only (7 folds)** | **TODO(gpu)** | TODO(gpu) |
