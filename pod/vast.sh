@@ -7,9 +7,9 @@
 #            ssh -p $PORT root@$HOST 'tar xzf pathcrf_box.tgz && bash pathcrf/vast.sh setup'
 #            ssh -p $PORT root@$HOST 'cd pathcrf && nohup bash vast.sh folds 0 1 2 3 4 5 6 > folds.log 2>&1 &'   # DFL leave-one-out, DFL only (trials 200+k)
 #            ssh -p $PORT root@$HOST 'cd pathcrf && SOURCES="sportec pff" nohup bash vast.sh folds 0 1 2 3 4 5 6 > folds_pff.log 2>&1 &'   # same with PFF in training (trials 300+k)
-#            ssh -p $PORT root@$HOST 'cd pathcrf && nohup bash vast.sh full > full.log 2>&1 &'                    # final model on all 7 DFL + 64 PFF
-#            scp -P $PORT -r root@$HOST:~/pathcrf/saved/3* ~/pathcrf/saved/                                    # weights back; run src/pathcrf_run.py --trial 300
-set -euo pipefail
+#            ssh -p $PORT root@$HOST 'cd pathcrf && nohup bash vast.sh full > full.log 2>&1 &'                    # final model on all 7 DFL + 64 PFF (trial 400)
+#            scp -P $PORT -r root@$HOST:~/pathcrf/saved/[234]* ~/pathcrf/saved/                                    # weights back; run src/pathcrf_run.py --trial 400
+set -euo pipefail; [ -d /venv/main ] && export PATH=/venv/main/bin:$PATH   # vast pytorch template venv
 case "${1:-}" in
 pack)
   cd ~ && tar czf /tmp/pathcrf_box.tgz --exclude=pathcrf/.venv --exclude=pathcrf/data/sportec/tracking --exclude=pathcrf/data/sportec/event --exclude=pathcrf/data/sportec/metadata \
@@ -33,13 +33,13 @@ folds)   # DFL leave-one-match-out; SOURCES="sportec" (trials 200+k) or "sportec
   for k in "$@"; do
     python train.py --trial $((base+k)) --lomocv --cv_fold_idx $k --sources $SOURCES --agent_model set_tf --seq_model sab \
       --crf_model dynamic_sparse_crf --macro_type poss_edge --micro_type poss_edge --node_in_dim 8 --target_fps 5 --window_stride 1 --flip_pitch \
-      --seq_dim 128 --crf_edge_dim 16 --emit_loss --src_loss --dst_loss --macro_weight 1 --crf_weight 1 --n_epochs 30 --batch_size 64 \
+      --seq_dim 128 --crf_edge_dim 16 --emit_loss --src_loss --dst_loss --macro_weight 1 --crf_weight 1 --n_epochs ${N_EPOCHS:-30} --batch_size 64 \
       --start_lr 1e-3 --min_lr 1e-5 --weight_decay 1e-4 --num_workers 2 2>&1 | grep -v -i warn > fold${base}_$k.log
   done; echo "folds done" ;;
-full)    # final model: 6 DFL + 63 PFF train, 1 DFL + 1 PFF val -> saved/300
-  cd ~/pathcrf && python train.py --trial 300 --sources sportec pff --agent_model set_tf --seq_model sab \
+full)    # final model: 6 DFL + 63 PFF train, 1 DFL + 1 PFF val -> saved/400
+  cd ~/pathcrf && python train.py --trial 400 --sources sportec pff --agent_model set_tf --seq_model sab \
       --crf_model dynamic_sparse_crf --macro_type poss_edge --micro_type poss_edge --node_in_dim 8 --target_fps 5 --window_stride 1 --flip_pitch \
-      --seq_dim 128 --crf_edge_dim 16 --emit_loss --src_loss --dst_loss --macro_weight 1 --crf_weight 1 --n_epochs 30 --batch_size 64 \
+      --seq_dim 128 --crf_edge_dim 16 --emit_loss --src_loss --dst_loss --macro_weight 1 --crf_weight 1 --n_epochs ${N_EPOCHS:-30} --batch_size 64 \
       --start_lr 1e-3 --min_lr 1e-5 --weight_decay 1e-4 --num_workers 2 2>&1 | grep -v -i warn > full.log; echo "full done" ;;
 *) echo "usage: vast.sh pack|setup|folds k...|full"; exit 1 ;;
 esac
