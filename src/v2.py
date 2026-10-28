@@ -26,6 +26,12 @@ def dfl_game(mid, seed):
     d = degrade_players(degrade_ball(dead_ball_carry(d, seed) if CARRY else d, seed=seed), seed)
     return simulate_detector(d, seed) if FILLS else d
 
+def pff_game(gid, seed=0, labels="rule"):
+    """PFF WC22 cache as a training game: same degradation as DFL; labels 'rule' (src/pff.py) or 'teacher' (src/label_transfer.py)."""
+    z = np.load(os.path.join(ROOT, f"data_raw/external/pff_{gid}.npz"), allow_pickle=True); d = {q: z[q] for q in ("players", "ball", "team", "labels", "period")}; d["fps"] = 25
+    if labels == "teacher": d["labels"] = np.load(os.path.join(ROOT, f"data_raw/external/pff_labels2_{gid}.npy"), allow_pickle=True)
+    d = degrade_players(degrade_ball(dead_ball_carry(d, seed) if CARRY else d, seed=seed), seed); return d
+
 def mirror(X, names):
     """Swap home and away columns, negate the differences."""
     Xm = X.copy()

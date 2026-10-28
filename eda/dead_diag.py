@@ -11,12 +11,28 @@ from src.features import features
 from src.possession import score, LAB
 CACHE = os.path.join(ROOT, f"eda/out/dead_folds{os.environ.get('TAG', '')}.npz")
 
+PFF = os.environ.get("PFF", "")   # "" | rule | teacher: add all 64 PFF matches (every 5th frame, mirrored) to the training set
+PFF_CACHE = os.path.join(ROOT, "eda/out/pff_feats")
+
+def pff_train(labels):
+    """(X, y) over all PFF caches, every 5th frame + mirror; features cached per game (degradation seed fixed), labels applied here."""
+    import glob; from src.v2 import pff_game, mirror; os.makedirs(PFF_CACHE, exist_ok=True); Xs, ys = [], []
+    for f in sorted(glob.glob(os.path.join(ROOT, "data_raw/external/pff_*.npz"))):
+        gid = os.path.basename(f)[4:-4]; c = os.path.join(PFF_CACHE, f"{gid}.npz")
+        if not os.path.exists(c):
+            d = pff_game(gid, seed=int(gid) % 1000); X, names = features(d, (105.0, 68.0)); np.savez(c, X=X[::5], Xm=mirror(X, names)[::5]); print("cached", gid, flush=True)
+        z = np.load(c); L = pff_game(gid, labels=labels)["labels"][::5]; y = (L == "A") * 1 + (L == "D") * 2
+        Xs += [z["X"], z["Xm"]]; ys += [y, np.where(y == 2, 2, 1 - y)]
+    return np.concatenate(Xs), np.concatenate(ys)
+
 def folds():
     if os.path.exists(CACHE):
         z = np.load(CACHE, allow_pickle=True); return list(zip(z["labels"], z["logp"]))
     out = []
     for held in IDS:
-        v2.FILLS = FILLS == "1"; X, y, _ = dataset([m for m in IDS if m != held]); clf = fit(X, y); v2.FILLS = FILLS in ("1", "test"); d = dfl_game(held, 99); Xh, _ = features(d, (105.0, 68.0))
+        v2.FILLS = FILLS == "1"; X, y, _ = dataset([m for m in IDS if m != held])
+        if PFF: Xp, yp = pff_train(PFF); X, y = np.concatenate([X, Xp]), np.concatenate([y, yp])
+        clf = fit(X, y); v2.FILLS = FILLS in ("1", "test"); d = dfl_game(held, 99); Xh, _ = features(d, (105.0, 68.0))
         out.append((d["labels"], np.log(clf.predict_proba(Xh).clip(1e-4, 1)))); print(held, flush=True)
     np.savez(CACHE, labels=np.array([l for l, _ in out], dtype=object), logp=np.array([lp for _, lp in out], dtype=object)); return out
 
