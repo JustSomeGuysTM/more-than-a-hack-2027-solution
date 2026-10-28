@@ -90,6 +90,23 @@ fills ~14% of hidden frames in runs of p50 4 / p90 14 frames, errors p50 0.8 m, 
 fused pipeline costs a 2.5-h detector pass for anyone reproducing the CSV. **Decision: the detector stays out of the
 submission pipeline**; the simulator stays so a better detector (SoccerNet-trained) can be judged the same way.
 
+## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
+Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with
+`src/pathcrf_run.py --trial 200 --dfl J03WMX` (GT dead frames substituted, PathCRF team on covered alive frames):
+
+| J03WMX held out, GT dead for all | spellF1 | macroF1 | spells (gt 511) |
+|---|---|---|---|
+| HGB v3 (augmented, fold 0) | 0.509 | 0.916 | 312 |
+| BiGRU (augmented, fold 0) | 0.568 | 0.925 | 325 |
+| **PathCRF ours, trial 200** | **0.608** | **0.933** | **419** |
+| authors' 140 (J03WMX was in its training set) | 0.706 | 0.955 | 399 |
+
+Authors' checkpoint 140 is itself a leave-one-out fold (`--lomocv --cv_fold_idx 6`: held-out J03WR9, val J03WQQ, 5 training
+matches, batch 32, 50 epochs, seed 100; everything else identical to ours), so it *is* documentable: public DFL only.
+Its own held-out score with this scorer: 0.727 / 0.949 (335 spells, gt 370). Direct comparison comes from our trial 206.
+Incident: the queue stalled 1 h after fold 0 because two stale watcher shells whose command lines contained `train.py`
+kept `pgrep -f train.py` true; killed, folds 1-6 running. Fold logs: `pod/logs/`.
+
 ## The task in one line
 One LaLiga match (Barcelona vs Athletic, 2024-25 MD2). For each of the 199,319 frames of the
 tactical video (25 fps) output `H` (Barça has ball), `A` (Athletic has ball), `D` (dead ball),

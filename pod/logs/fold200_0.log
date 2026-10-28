@@ -1,0 +1,478 @@
+LOMOCV fold 0/7: train=5 files, val=J03WR9.parquet, test=J03WMX.parquet
+
+Generating datasets...
+Building window samples:   0%|          | 0/5 [00:00<?, ?it/s]Building window samples:  20%|██        | 1/5 [00:02<00:08,  2.18s/it]Building window samples:  40%|████      | 2/5 [00:04<00:06,  2.22s/it]Building window samples:  60%|██████    | 3/5 [00:06<00:04,  2.32s/it]Building window samples:  80%|████████  | 4/5 [00:09<00:02,  2.43s/it]Building window samples: 100%|██████████| 5/5 [00:12<00:00,  2.49s/it]Building window samples: 100%|██████████| 5/5 [00:12<00:00,  2.41s/it]
+Building window samples:   0%|          | 0/1 [00:00<?, ?it/s]Building window samples: 100%|██████████| 1/1 [00:02<00:00,  2.58s/it]Building window samples: 100%|██████████| 1/1 [00:02<00:00,  2.58s/it]
+
+Epoch 1
+[W1028 00:59:02.810316795 CUDACachingAllocator.cpp:3934] memory allocation failed with OOM on device 0 while trying to allocate 2216689664 bytes (free: 576454656, total: 25250627584).
+[  0/854]   macro_loss: 6.4448 | macro_acc: 0.0069 | micro_loss: 13.0418 | crf_loss: 3.2252 | edge_acc: 0.0009 | src_acc: 0.0425 | dst_acc: 0.0409
+[W1028 00:59:03.389503188 CUDACachingAllocator.cpp:3934] memory allocation failed with OOM on device 0 while trying to allocate 2216689664 bytes (free: 2122055680, total: 25250627584).
+[100/854]   macro_loss: 4.5189 | macro_acc: 0.1746 | micro_loss: 8.5244 | crf_loss: 2.1234 | edge_acc: 0.1745 | src_acc: 0.3122 | dst_acc: 0.3343
+[200/854]   macro_loss: 3.9570 | macro_acc: 0.2296 | micro_loss: 6.9361 | crf_loss: 1.5910 | edge_acc: 0.2347 | src_acc: 0.4040 | dst_acc: 0.4327
+[300/854]   macro_loss: 3.6224 | macro_acc: 0.2633 | micro_loss: 6.1789 | crf_loss: 1.3350 | edge_acc: 0.2758 | src_acc: 0.4499 | dst_acc: 0.4813
+[400/854]   macro_loss: 3.3426 | macro_acc: 0.2954 | micro_loss: 5.6726 | crf_loss: 1.1800 | edge_acc: 0.3091 | src_acc: 0.4827 | dst_acc: 0.5166
+[500/854]   macro_loss: 3.1346 | macro_acc: 0.3210 | micro_loss: 5.3112 | crf_loss: 1.0741 | edge_acc: 0.3346 | src_acc: 0.5061 | dst_acc: 0.5423
+[600/854]   macro_loss: 2.9768 | macro_acc: 0.3419 | micro_loss: 5.0353 | crf_loss: 0.9973 | edge_acc: 0.3547 | src_acc: 0.5244 | dst_acc: 0.5618
+[700/854]   macro_loss: 2.8467 | macro_acc: 0.3602 | micro_loss: 4.7900 | crf_loss: 0.9342 | edge_acc: 0.3747 | src_acc: 0.5423 | dst_acc: 0.5806
+[800/854]   macro_loss: 2.7393 | macro_acc: 0.3759 | micro_loss: 4.5831 | crf_loss: 0.8838 | edge_acc: 0.3931 | src_acc: 0.5581 | dst_acc: 0.5975
+Train:	  macro_loss: 2.6892 | macro_acc: 0.3835 | micro_loss: 4.4839 | crf_loss: 0.8601 | edge_acc: 0.4020 | src_acc: 0.5659 | dst_acc: 0.6055
+Val:	  macro_loss: 1.7605 | macro_acc: 0.5402 | micro_loss: 2.8503 | crf_loss: 0.4870 | edge_acc: 0.5912 | src_acc: 0.7236 | dst_acc: 0.7548 | forbid_rate: 0.0000
+Time:	 485.62 s (avg 485.62 s/epoch)
+GPU:	 20326 MB
+######## Best Total Loss ########
+######### Best Accuracy #########
+
+Epoch 2
+[  0/854]   macro_loss: 1.8858 | macro_acc: 0.4797 | micro_loss: 2.8194 | crf_loss: 0.5043 | edge_acc: 0.5384 | src_acc: 0.7109 | dst_acc: 0.7206
+[100/854]   macro_loss: 1.8750 | macro_acc: 0.5078 | micro_loss: 2.8591 | crf_loss: 0.4941 | edge_acc: 0.5530 | src_acc: 0.6958 | dst_acc: 0.7398
+[200/854]   macro_loss: 1.8500 | macro_acc: 0.5121 | micro_loss: 2.8008 | crf_loss: 0.4833 | edge_acc: 0.5613 | src_acc: 0.7009 | dst_acc: 0.7470
+[300/854]   macro_loss: 1.8117 | macro_acc: 0.5206 | micro_loss: 2.7098 | crf_loss: 0.4690 | edge_acc: 0.5744 | src_acc: 0.7106 | dst_acc: 0.7577
+[400/854]   macro_loss: 1.7949 | macro_acc: 0.5240 | micro_loss: 2.6548 | crf_loss: 0.4602 | edge_acc: 0.5817 | src_acc: 0.7166 | dst_acc: 0.7631
+[500/854]   macro_loss: 1.7769 | macro_acc: 0.5282 | micro_loss: 2.6116 | crf_loss: 0.4534 | edge_acc: 0.5875 | src_acc: 0.7204 | dst_acc: 0.7678
+[600/854]   macro_loss: 1.7522 | macro_acc: 0.5332 | micro_loss: 2.5600 | crf_loss: 0.4461 | edge_acc: 0.5948 | src_acc: 0.7256 | dst_acc: 0.7733
+[700/854]   macro_loss: 1.7337 | macro_acc: 0.5374 | micro_loss: 2.5166 | crf_loss: 0.4395 | edge_acc: 0.6013 | src_acc: 0.7303 | dst_acc: 0.7776
+[800/854]   macro_loss: 1.7127 | macro_acc: 0.5415 | micro_loss: 2.4702 | crf_loss: 0.4330 | edge_acc: 0.6074 | src_acc: 0.7353 | dst_acc: 0.7818
+Train:	  macro_loss: 1.7022 | macro_acc: 0.5437 | micro_loss: 2.4480 | crf_loss: 0.4300 | edge_acc: 0.6102 | src_acc: 0.7374 | dst_acc: 0.7839
+Val:	  macro_loss: 1.5316 | macro_acc: 0.5842 | micro_loss: 2.4238 | crf_loss: 0.4065 | edge_acc: 0.6544 | src_acc: 0.7665 | dst_acc: 0.8100 | forbid_rate: 0.0000
+Time:	 485.39 s (avg 485.50 s/epoch)
+GPU:	 20326 MB
+######## Best Total Loss ########
+######### Best Accuracy #########
+
+Epoch 3
+[  0/854]   macro_loss: 1.3866 | macro_acc: 0.6112 | micro_loss: 2.0774 | crf_loss: 0.3811 | edge_acc: 0.6478 | src_acc: 0.7794 | dst_acc: 0.8147
+[100/854]   macro_loss: 1.5348 | macro_acc: 0.5791 | micro_loss: 2.1074 | crf_loss: 0.3801 | edge_acc: 0.6584 | src_acc: 0.7730 | dst_acc: 0.8185
+[200/854]   macro_loss: 1.5288 | macro_acc: 0.5802 | micro_loss: 2.0884 | crf_loss: 0.3789 | edge_acc: 0.6598 | src_acc: 0.7738 | dst_acc: 0.8194
+[300/854]   macro_loss: 1.5075 | macro_acc: 0.5837 | micro_loss: 2.0383 | crf_loss: 0.3729 | edge_acc: 0.6655 | src_acc: 0.7779 | dst_acc: 0.8234
+[400/854]   macro_loss: 1.4900 | macro_acc: 0.5874 | micro_loss: 2.0057 | crf_loss: 0.3680 | edge_acc: 0.6702 | src_acc: 0.7804 | dst_acc: 0.8270
+[500/854]   macro_loss: 1.4780 | macro_acc: 0.5902 | micro_loss: 1.9784 | crf_loss: 0.3645 | edge_acc: 0.6749 | src_acc: 0.7838 | dst_acc: 0.8299
+[600/854]   macro_loss: 1.4720 | macro_acc: 0.5914 | micro_loss: 1.9612 | crf_loss: 0.3622 | edge_acc: 0.6771 | src_acc: 0.7853 | dst_acc: 0.8312
+[700/854]   macro_loss: 1.4585 | macro_acc: 0.5947 | micro_loss: 1.9327 | crf_loss: 0.3588 | edge_acc: 0.6808 | src_acc: 0.7878 | dst_acc: 0.8337
+[800/854]   macro_loss: 1.4453 | macro_acc: 0.5977 | micro_loss: 1.9091 | crf_loss: 0.3561 | edge_acc: 0.6843 | src_acc: 0.7905 | dst_acc: 0.8356
+Train:	  macro_loss: 1.4390 | macro_acc: 0.5993 | micro_loss: 1.8984 | crf_loss: 0.3547 | edge_acc: 0.6859 | src_acc: 0.7917 | dst_acc: 0.8366
+Val:	  macro_loss: 1.4447 | macro_acc: 0.6066 | micro_loss: 2.2902 | crf_loss: 0.3834 | edge_acc: 0.6741 | src_acc: 0.7783 | dst_acc: 0.8273 | forbid_rate: 0.0000
+Time:	 485.16 s (avg 485.39 s/epoch)
+GPU:	 20326 MB
+######## Best Total Loss ########
+######### Best Accuracy #########
+
+Epoch 4
+[  0/854]   macro_loss: 1.2978 | macro_acc: 0.6281 | micro_loss: 1.5970 | crf_loss: 0.3168 | edge_acc: 0.7600 | src_acc: 0.8397 | dst_acc: 0.8797
+[100/854]   macro_loss: 1.3332 | macro_acc: 0.6245 | micro_loss: 1.6904 | crf_loss: 0.3280 | edge_acc: 0.7134 | src_acc: 0.8117 | dst_acc: 0.8533
+[200/854]   macro_loss: 1.3163 | macro_acc: 0.6276 | micro_loss: 1.6659 | crf_loss: 0.3250 | edge_acc: 0.7178 | src_acc: 0.8144 | dst_acc: 0.8555
+[300/854]   macro_loss: 1.3095 | macro_acc: 0.6291 | micro_loss: 1.6519 | crf_loss: 0.3229 | edge_acc: 0.7200 | src_acc: 0.8158 | dst_acc: 0.8576
+[400/854]   macro_loss: 1.3008 | macro_acc: 0.6308 | micro_loss: 1.6407 | crf_loss: 0.3221 | edge_acc: 0.7218 | src_acc: 0.8172 | dst_acc: 0.8587
+[500/854]   macro_loss: 1.2957 | macro_acc: 0.6318 | micro_loss: 1.6298 | crf_loss: 0.3207 | edge_acc: 0.7242 | src_acc: 0.8188 | dst_acc: 0.8598
+[600/854]   macro_loss: 1.2852 | macro_acc: 0.6340 | micro_loss: 1.6137 | crf_loss: 0.3186 | edge_acc: 0.7263 | src_acc: 0.8205 | dst_acc: 0.8608
+[700/854]   macro_loss: 1.2767 | macro_acc: 0.6360 | micro_loss: 1.5985 | crf_loss: 0.3167 | edge_acc: 0.7289 | src_acc: 0.8222 | dst_acc: 0.8623
+[800/854]   macro_loss: 1.2673 | macro_acc: 0.6384 | micro_loss: 1.5819 | crf_loss: 0.3148 | edge_acc: 0.7316 | src_acc: 0.8243 | dst_acc: 0.8638
+Train:	  macro_loss: 1.2612 | macro_acc: 0.6398 | micro_loss: 1.5708 | crf_loss: 0.3137 | edge_acc: 0.7333 | src_acc: 0.8254 | dst_acc: 0.8650
+Val:	  macro_loss: 1.4402 | macro_acc: 0.6093 | micro_loss: 2.3649 | crf_loss: 0.3917 | edge_acc: 0.6851 | src_acc: 0.7872 | dst_acc: 0.8259 | forbid_rate: 0.0000
+Time:	 485.17 s (avg 485.33 s/epoch)
+GPU:	 20326 MB
+######### Best Accuracy #########
+
+Epoch 5
+[  0/854]   macro_loss: 1.0964 | macro_acc: 0.6850 | micro_loss: 1.2644 | crf_loss: 0.2636 | edge_acc: 0.7713 | src_acc: 0.8550 | dst_acc: 0.8900
+[100/854]   macro_loss: 1.1965 | macro_acc: 0.6554 | micro_loss: 1.4576 | crf_loss: 0.3000 | edge_acc: 0.7522 | src_acc: 0.8393 | dst_acc: 0.8766
+[200/854]   macro_loss: 1.1690 | macro_acc: 0.6616 | micro_loss: 1.4130 | crf_loss: 0.2939 | edge_acc: 0.7582 | src_acc: 0.8432 | dst_acc: 0.8803
+[300/854]   macro_loss: 1.1693 | macro_acc: 0.6610 | micro_loss: 1.4087 | crf_loss: 0.2935 | edge_acc: 0.7597 | src_acc: 0.8445 | dst_acc: 0.8809
+[400/854]   macro_loss: 1.1580 | macro_acc: 0.6632 | micro_loss: 1.3859 | crf_loss: 0.2910 | edge_acc: 0.7630 | src_acc: 0.8471 | dst_acc: 0.8825
+[500/854]   macro_loss: 1.1517 | macro_acc: 0.6649 | micro_loss: 1.3719 | crf_loss: 0.2892 | edge_acc: 0.7646 | src_acc: 0.8485 | dst_acc: 0.8830
+[600/854]   macro_loss: 1.1409 | macro_acc: 0.6678 | micro_loss: 1.3598 | crf_loss: 0.2873 | edge_acc: 0.7664 | src_acc: 0.8498 | dst_acc: 0.8840
+[700/854]   macro_loss: 1.1336 | macro_acc: 0.6698 | micro_loss: 1.3479 | crf_loss: 0.2860 | edge_acc: 0.7683 | src_acc: 0.8511 | dst_acc: 0.8853
+[800/854]   macro_loss: 1.1246 | macro_acc: 0.6719 | micro_loss: 1.3345 | crf_loss: 0.2839 | edge_acc: 0.7701 | src_acc: 0.8524 | dst_acc: 0.8863
+Train:	  macro_loss: 1.1214 | macro_acc: 0.6725 | micro_loss: 1.3281 | crf_loss: 0.2833 | edge_acc: 0.7710 | src_acc: 0.8530 | dst_acc: 0.8867
+Val:	  macro_loss: 1.4205 | macro_acc: 0.6270 | micro_loss: 2.3314 | crf_loss: 0.3884 | edge_acc: 0.7087 | src_acc: 0.8074 | dst_acc: 0.8445 | forbid_rate: 0.0000
+Time:	 485.28 s (avg 485.32 s/epoch)
+GPU:	 20326 MB
+######### Best Accuracy #########
+
+Epoch 6
+[  0/854]   macro_loss: 0.9696 | macro_acc: 0.7050 | micro_loss: 1.1206 | crf_loss: 0.2633 | edge_acc: 0.7909 | src_acc: 0.8666 | dst_acc: 0.8969
+[100/854]   macro_loss: 1.0881 | macro_acc: 0.6797 | micro_loss: 1.2926 | crf_loss: 0.2814 | edge_acc: 0.7764 | src_acc: 0.8570 | dst_acc: 0.8895
+[200/854]   macro_loss: 1.0601 | macro_acc: 0.6861 | micro_loss: 1.2371 | crf_loss: 0.2732 | edge_acc: 0.7842 | src_acc: 0.8622 | dst_acc: 0.8940
+[300/854]   macro_loss: 1.0408 | macro_acc: 0.6906 | micro_loss: 1.2010 | crf_loss: 0.2683 | edge_acc: 0.7902 | src_acc: 0.8660 | dst_acc: 0.8980
+[400/854]   macro_loss: 1.0292 | macro_acc: 0.6936 | micro_loss: 1.1810 | crf_loss: 0.2649 | edge_acc: 0.7929 | src_acc: 0.8682 | dst_acc: 0.8992
+[500/854]   macro_loss: 1.0237 | macro_acc: 0.6949 | micro_loss: 1.1703 | crf_loss: 0.2634 | edge_acc: 0.7946 | src_acc: 0.8695 | dst_acc: 0.9004
+[600/854]   macro_loss: 1.0137 | macro_acc: 0.6976 | micro_loss: 1.1569 | crf_loss: 0.2617 | edge_acc: 0.7973 | src_acc: 0.8715 | dst_acc: 0.9016
+[700/854]   macro_loss: 1.0077 | macro_acc: 0.6992 | micro_loss: 1.1476 | crf_loss: 0.2604 | edge_acc: 0.7988 | src_acc: 0.8726 | dst_acc: 0.9023
+[800/854]   macro_loss: 1.0037 | macro_acc: 0.7002 | micro_loss: 1.1404 | crf_loss: 0.2595 | edge_acc: 0.8000 | src_acc: 0.8736 | dst_acc: 0.9029
+Train:	  macro_loss: 1.0036 | macro_acc: 0.7002 | micro_loss: 1.1411 | crf_loss: 0.2594 | edge_acc: 0.7999 | src_acc: 0.8736 | dst_acc: 0.9027
+Val:	  macro_loss: 1.4113 | macro_acc: 0.6306 | micro_loss: 2.3357 | crf_loss: 0.4174 | edge_acc: 0.7162 | src_acc: 0.8102 | dst_acc: 0.8504 | forbid_rate: 0.0000
+Time:	 485.07 s (avg 485.28 s/epoch)
+GPU:	 20326 MB
+######### Best Accuracy #########
+
+Epoch 7
+[  0/854]   macro_loss: 1.0139 | macro_acc: 0.7081 | micro_loss: 1.1670 | crf_loss: 0.2644 | edge_acc: 0.8162 | src_acc: 0.8859 | dst_acc: 0.9153
+[100/854]   macro_loss: 0.9793 | macro_acc: 0.7065 | micro_loss: 1.0963 | crf_loss: 0.2544 | edge_acc: 0.8067 | src_acc: 0.8787 | dst_acc: 0.9060
+[200/854]   macro_loss: 0.9609 | macro_acc: 0.7112 | micro_loss: 1.0686 | crf_loss: 0.2504 | edge_acc: 0.8113 | src_acc: 0.8813 | dst_acc: 0.9095
+[300/854]   macro_loss: 0.9468 | macro_acc: 0.7147 | micro_loss: 1.0460 | crf_loss: 0.2466 | edge_acc: 0.8146 | src_acc: 0.8839 | dst_acc: 0.9110
+[400/854]   macro_loss: 0.9345 | macro_acc: 0.7176 | micro_loss: 1.0294 | crf_loss: 0.2443 | edge_acc: 0.8170 | src_acc: 0.8859 | dst_acc: 0.9120
+[500/854]   macro_loss: 0.9246 | macro_acc: 0.7198 | micro_loss: 1.0123 | crf_loss: 0.2421 | edge_acc: 0.8198 | src_acc: 0.8879 | dst_acc: 0.9133
+[600/854]   macro_loss: 0.9156 | macro_acc: 0.7220 | micro_loss: 1.0038 | crf_loss: 0.2406 | edge_acc: 0.8213 | src_acc: 0.8888 | dst_acc: 0.9143
+[700/854]   macro_loss: 0.9081 | macro_acc: 0.7241 | micro_loss: 0.9916 | crf_loss: 0.2390 | edge_acc: 0.8234 | src_acc: 0.8902 | dst_acc: 0.9154
+[800/854]   macro_loss: 0.9091 | macro_acc: 0.7236 | micro_loss: 0.9904 | crf_loss: 0.2386 | edge_acc: 0.8238 | src_acc: 0.8905 | dst_acc: 0.9155
+Train:	  macro_loss: 0.9110 | macro_acc: 0.7233 | micro_loss: 0.9906 | crf_loss: 0.2384 | edge_acc: 0.8238 | src_acc: 0.8906 | dst_acc: 0.9154
+Val:	  macro_loss: 1.4559 | macro_acc: 0.6298 | micro_loss: 2.6293 | crf_loss: 0.4648 | edge_acc: 0.7115 | src_acc: 0.8046 | dst_acc: 0.8505 | forbid_rate: 0.0000
+Time:	 485.25 s (avg 485.28 s/epoch)
+GPU:	 20326 MB
+
+Epoch 8
+[  0/854]   macro_loss: 0.8219 | macro_acc: 0.7425 | micro_loss: 1.0380 | crf_loss: 0.2492 | edge_acc: 0.8253 | src_acc: 0.8922 | dst_acc: 0.9194
+[100/854]   macro_loss: 0.8900 | macro_acc: 0.7295 | micro_loss: 0.9649 | crf_loss: 0.2337 | edge_acc: 0.8287 | src_acc: 0.8931 | dst_acc: 0.9188
+[200/854]   macro_loss: 0.8750 | macro_acc: 0.7329 | micro_loss: 0.9341 | crf_loss: 0.2300 | edge_acc: 0.8337 | src_acc: 0.8972 | dst_acc: 0.9206
+[300/854]   macro_loss: 0.8683 | macro_acc: 0.7345 | micro_loss: 0.9272 | crf_loss: 0.2289 | edge_acc: 0.8346 | src_acc: 0.8978 | dst_acc: 0.9209
+[400/854]   macro_loss: 0.8573 | macro_acc: 0.7370 | micro_loss: 0.9137 | crf_loss: 0.2270 | edge_acc: 0.8368 | src_acc: 0.8991 | dst_acc: 0.9223
+[500/854]   macro_loss: 0.8467 | macro_acc: 0.7399 | micro_loss: 0.8983 | crf_loss: 0.2249 | edge_acc: 0.8394 | src_acc: 0.9008 | dst_acc: 0.9237
+[600/854]   macro_loss: 0.8366 | macro_acc: 0.7426 | micro_loss: 0.8848 | crf_loss: 0.2227 | edge_acc: 0.8417 | src_acc: 0.9026 | dst_acc: 0.9247
+[700/854]   macro_loss: 0.8334 | macro_acc: 0.7435 | micro_loss: 0.8800 | crf_loss: 0.2221 | edge_acc: 0.8427 | src_acc: 0.9033 | dst_acc: 0.9252
+[800/854]   macro_loss: 0.8278 | macro_acc: 0.7449 | micro_loss: 0.8728 | crf_loss: 0.2211 | edge_acc: 0.8439 | src_acc: 0.9042 | dst_acc: 0.9257
+Train:	  macro_loss: 0.8267 | macro_acc: 0.7451 | micro_loss: 0.8715 | crf_loss: 0.2209 | edge_acc: 0.8441 | src_acc: 0.9044 | dst_acc: 0.9258
+Val:	  macro_loss: 1.4362 | macro_acc: 0.6366 | micro_loss: 2.6221 | crf_loss: 0.4638 | edge_acc: 0.7215 | src_acc: 0.8164 | dst_acc: 0.8503 | forbid_rate: 0.0000
+Time:	 485.19 s (avg 485.27 s/epoch)
+GPU:	 20326 MB
+######### Best Accuracy #########
+
+Epoch 9
+[  0/854]   macro_loss: 0.9075 | macro_acc: 0.7256 | micro_loss: 0.8902 | crf_loss: 0.2183 | edge_acc: 0.8341 | src_acc: 0.8884 | dst_acc: 0.9262
+[100/854]   macro_loss: 0.8398 | macro_acc: 0.7406 | micro_loss: 0.8936 | crf_loss: 0.2205 | edge_acc: 0.8403 | src_acc: 0.9012 | dst_acc: 0.9238
+[200/854]   macro_loss: 0.8126 | macro_acc: 0.7485 | micro_loss: 0.8575 | crf_loss: 0.2170 | edge_acc: 0.8458 | src_acc: 0.9052 | dst_acc: 0.9270
+[300/854]   macro_loss: 0.8071 | macro_acc: 0.7498 | micro_loss: 0.8465 | crf_loss: 0.2155 | edge_acc: 0.8480 | src_acc: 0.9069 | dst_acc: 0.9278
+[400/854]   macro_loss: 0.7889 | macro_acc: 0.7549 | micro_loss: 0.8225 | crf_loss: 0.2119 | edge_acc: 0.8520 | src_acc: 0.9098 | dst_acc: 0.9296
+[500/854]   macro_loss: 0.7774 | macro_acc: 0.7580 | micro_loss: 0.8071 | crf_loss: 0.2098 | edge_acc: 0.8545 | src_acc: 0.9114 | dst_acc: 0.9309
+[600/854]   macro_loss: 0.7707 | macro_acc: 0.7596 | micro_loss: 0.7983 | crf_loss: 0.2085 | edge_acc: 0.8561 | src_acc: 0.9126 | dst_acc: 0.9317
+[700/854]   macro_loss: 0.7653 | macro_acc: 0.7611 | micro_loss: 0.7935 | crf_loss: 0.2077 | edge_acc: 0.8572 | src_acc: 0.9132 | dst_acc: 0.9322
+[800/854]   macro_loss: 0.7610 | macro_acc: 0.7623 | micro_loss: 0.7880 | crf_loss: 0.2070 | edge_acc: 0.8582 | src_acc: 0.9139 | dst_acc: 0.9326
+Train:	  macro_loss: 0.7617 | macro_acc: 0.7622 | micro_loss: 0.7874 | crf_loss: 0.2069 | edge_acc: 0.8583 | src_acc: 0.9141 | dst_acc: 0.9326
+Val:	  macro_loss: 1.5412 | macro_acc: 0.6168 | micro_loss: 2.6458 | crf_loss: 0.4801 | edge_acc: 0.7063 | src_acc: 0.7996 | dst_acc: 0.8457 | forbid_rate: 0.0000
+Time:	 485.18 s (avg 485.26 s/epoch)
+GPU:	 20326 MB
+
+Epoch 10
+[  0/854]   macro_loss: 0.8149 | macro_acc: 0.7466 | micro_loss: 0.8300 | crf_loss: 0.2152 | edge_acc: 0.8572 | src_acc: 0.9041 | dst_acc: 0.9397
+[100/854]   macro_loss: 0.7985 | macro_acc: 0.7521 | micro_loss: 0.8388 | crf_loss: 0.2125 | edge_acc: 0.8510 | src_acc: 0.9082 | dst_acc: 0.9291
+[200/854]   macro_loss: 0.7581 | macro_acc: 0.7629 | micro_loss: 0.7843 | crf_loss: 0.2050 | edge_acc: 0.8598 | src_acc: 0.9141 | dst_acc: 0.9337
+[300/854]   macro_loss: 0.7476 | macro_acc: 0.7658 | micro_loss: 0.7672 | crf_loss: 0.2029 | edge_acc: 0.8618 | src_acc: 0.9158 | dst_acc: 0.9345
+[400/854]   macro_loss: 0.7317 | macro_acc: 0.7703 | micro_loss: 0.7458 | crf_loss: 0.1997 | edge_acc: 0.8657 | src_acc: 0.9182 | dst_acc: 0.9367
+[500/854]   macro_loss: 0.7181 | macro_acc: 0.7741 | micro_loss: 0.7292 | crf_loss: 0.1970 | edge_acc: 0.8688 | src_acc: 0.9202 | dst_acc: 0.9383
+[600/854]   macro_loss: 0.7165 | macro_acc: 0.7746 | micro_loss: 0.7266 | crf_loss: 0.1966 | edge_acc: 0.8692 | src_acc: 0.9207 | dst_acc: 0.9384
+[700/854]   macro_loss: 0.7106 | macro_acc: 0.7763 | micro_loss: 0.7195 | crf_loss: 0.1956 | edge_acc: 0.8702 | src_acc: 0.9215 | dst_acc: 0.9387
+[800/854]   macro_loss: 0.7060 | macro_acc: 0.7774 | micro_loss: 0.7128 | crf_loss: 0.1943 | edge_acc: 0.8714 | src_acc: 0.9224 | dst_acc: 0.9392
+Train:	  macro_loss: 0.7137 | macro_acc: 0.7755 | micro_loss: 0.7231 | crf_loss: 0.1958 | edge_acc: 0.8696 | src_acc: 0.9212 | dst_acc: 0.9383
+Val:	  macro_loss: 1.4662 | macro_acc: 0.6335 | micro_loss: 2.6807 | crf_loss: 0.4795 | edge_acc: 0.7171 | src_acc: 0.8107 | dst_acc: 0.8555 | forbid_rate: 0.0000
+Time:	 485.42 s (avg 485.27 s/epoch)
+GPU:	 20326 MB
+########## Saved Model ##########
+
+Epoch 11
+[  0/854]   macro_loss: 0.6775 | macro_acc: 0.7809 | micro_loss: 0.8209 | crf_loss: 0.2117 | edge_acc: 0.8534 | src_acc: 0.9025 | dst_acc: 0.9306
+[100/854]   macro_loss: 0.7439 | macro_acc: 0.7672 | micro_loss: 0.7540 | crf_loss: 0.2016 | edge_acc: 0.8652 | src_acc: 0.9185 | dst_acc: 0.9354
+[200/854]   macro_loss: 0.7105 | macro_acc: 0.7761 | micro_loss: 0.7177 | crf_loss: 0.1953 | edge_acc: 0.8711 | src_acc: 0.9220 | dst_acc: 0.9387
+[300/854]   macro_loss: 0.6855 | macro_acc: 0.7831 | micro_loss: 0.6845 | crf_loss: 0.1898 | edge_acc: 0.8765 | src_acc: 0.9256 | dst_acc: 0.9414
+[400/854]   macro_loss: 0.6726 | macro_acc: 0.7868 | micro_loss: 0.6684 | crf_loss: 0.1869 | edge_acc: 0.8792 | src_acc: 0.9273 | dst_acc: 0.9431
+[500/854]   macro_loss: 0.6669 | macro_acc: 0.7883 | micro_loss: 0.6599 | crf_loss: 0.1850 | edge_acc: 0.8807 | src_acc: 0.9282 | dst_acc: 0.9439
+[600/854]   macro_loss: 0.6607 | macro_acc: 0.7903 | micro_loss: 0.6508 | crf_loss: 0.1835 | edge_acc: 0.8825 | src_acc: 0.9295 | dst_acc: 0.9448
+[700/854]   macro_loss: 0.6594 | macro_acc: 0.7906 | micro_loss: 0.6489 | crf_loss: 0.1830 | edge_acc: 0.8828 | src_acc: 0.9298 | dst_acc: 0.9449
+[800/854]   macro_loss: 0.6599 | macro_acc: 0.7907 | micro_loss: 0.6493 | crf_loss: 0.1829 | edge_acc: 0.8827 | src_acc: 0.9297 | dst_acc: 0.9448
+Train:	  macro_loss: 0.6585 | macro_acc: 0.7910 | micro_loss: 0.6470 | crf_loss: 0.1825 | edge_acc: 0.8832 | src_acc: 0.9300 | dst_acc: 0.9450
+Val:	  macro_loss: 1.5318 | macro_acc: 0.6423 | micro_loss: 2.9308 | crf_loss: 0.5838 | edge_acc: 0.7201 | src_acc: 0.8164 | dst_acc: 0.8514 | forbid_rate: 0.0000
+Time:	 485.16 s (avg 485.26 s/epoch)
+GPU:	 20326 MB
+########## lr 0.0005 ##########
+
+Epoch 12
+[  0/854]   macro_loss: 0.6286 | macro_acc: 0.8000 | micro_loss: 0.6401 | crf_loss: 0.1865 | edge_acc: 0.8897 | src_acc: 0.9369 | dst_acc: 0.9406
+[100/854]   macro_loss: 0.5172 | macro_acc: 0.8309 | micro_loss: 0.4674 | crf_loss: 0.1497 | edge_acc: 0.9135 | src_acc: 0.9492 | dst_acc: 0.9596
+[200/854]   macro_loss: 0.4967 | macro_acc: 0.8373 | micro_loss: 0.4433 | crf_loss: 0.1442 | edge_acc: 0.9179 | src_acc: 0.9518 | dst_acc: 0.9619
+[300/854]   macro_loss: 0.4848 | macro_acc: 0.8409 | micro_loss: 0.4277 | crf_loss: 0.1404 | edge_acc: 0.9212 | src_acc: 0.9538 | dst_acc: 0.9635
+[400/854]   macro_loss: 0.4761 | macro_acc: 0.8436 | micro_loss: 0.4167 | crf_loss: 0.1377 | edge_acc: 0.9233 | src_acc: 0.9550 | dst_acc: 0.9646
+[500/854]   macro_loss: 0.4692 | macro_acc: 0.8455 | micro_loss: 0.4081 | crf_loss: 0.1356 | edge_acc: 0.9249 | src_acc: 0.9560 | dst_acc: 0.9653
+[600/854]   macro_loss: 0.4650 | macro_acc: 0.8467 | micro_loss: 0.4032 | crf_loss: 0.1341 | edge_acc: 0.9259 | src_acc: 0.9568 | dst_acc: 0.9657
+[700/854]   macro_loss: 0.4618 | macro_acc: 0.8477 | micro_loss: 0.3995 | crf_loss: 0.1329 | edge_acc: 0.9267 | src_acc: 0.9574 | dst_acc: 0.9660
+[800/854]   macro_loss: 0.4577 | macro_acc: 0.8489 | micro_loss: 0.3945 | crf_loss: 0.1315 | edge_acc: 0.9276 | src_acc: 0.9579 | dst_acc: 0.9664
+Train:	  macro_loss: 0.4570 | macro_acc: 0.8492 | micro_loss: 0.3929 | crf_loss: 0.1311 | edge_acc: 0.9280 | src_acc: 0.9581 | dst_acc: 0.9666
+Val:	  macro_loss: 1.5505 | macro_acc: 0.6509 | micro_loss: 3.3076 | crf_loss: 0.7320 | edge_acc: 0.7254 | src_acc: 0.8214 | dst_acc: 0.8571 | forbid_rate: 0.0000
+Time:	 485.01 s (avg 485.24 s/epoch)
+GPU:	 20326 MB
+######### Best Accuracy #########
+
+Epoch 13
+[  0/854]   macro_loss: 0.4052 | macro_acc: 0.8637 | micro_loss: 0.3183 | crf_loss: 0.1110 | edge_acc: 0.9428 | src_acc: 0.9631 | dst_acc: 0.9791
+[100/854]   macro_loss: 0.4304 | macro_acc: 0.8565 | micro_loss: 0.3651 | crf_loss: 0.1230 | edge_acc: 0.9329 | src_acc: 0.9614 | dst_acc: 0.9689
+[200/854]   macro_loss: 0.4274 | macro_acc: 0.8577 | micro_loss: 0.3588 | crf_loss: 0.1211 | edge_acc: 0.9344 | src_acc: 0.9619 | dst_acc: 0.9698
+[300/854]   macro_loss: 0.4269 | macro_acc: 0.8578 | micro_loss: 0.3562 | crf_loss: 0.1204 | edge_acc: 0.9349 | src_acc: 0.9622 | dst_acc: 0.9701
+[400/854]   macro_loss: 0.4274 | macro_acc: 0.8577 | micro_loss: 0.3549 | crf_loss: 0.1200 | edge_acc: 0.9351 | src_acc: 0.9623 | dst_acc: 0.9702
+[500/854]   macro_loss: 0.4279 | macro_acc: 0.8574 | micro_loss: 0.3556 | crf_loss: 0.1202 | edge_acc: 0.9349 | src_acc: 0.9620 | dst_acc: 0.9701
+[600/854]   macro_loss: 0.4277 | macro_acc: 0.8575 | micro_loss: 0.3544 | crf_loss: 0.1199 | edge_acc: 0.9352 | src_acc: 0.9621 | dst_acc: 0.9703
+[700/854]   macro_loss: 0.4286 | macro_acc: 0.8573 | micro_loss: 0.3545 | crf_loss: 0.1198 | edge_acc: 0.9350 | src_acc: 0.9621 | dst_acc: 0.9702
+[800/854]   macro_loss: 0.4277 | macro_acc: 0.8577 | micro_loss: 0.3539 | crf_loss: 0.1196 | edge_acc: 0.9352 | src_acc: 0.9622 | dst_acc: 0.9702
+Train:	  macro_loss: 0.4266 | macro_acc: 0.8580 | micro_loss: 0.3528 | crf_loss: 0.1192 | edge_acc: 0.9354 | src_acc: 0.9623 | dst_acc: 0.9703
+Val:	  macro_loss: 1.6111 | macro_acc: 0.6486 | micro_loss: 3.4468 | crf_loss: 0.7966 | edge_acc: 0.7245 | src_acc: 0.8192 | dst_acc: 0.8545 | forbid_rate: 0.0000
+Time:	 485.09 s (avg 485.23 s/epoch)
+GPU:	 20326 MB
+
+Epoch 14
+[  0/854]   macro_loss: 0.4306 | macro_acc: 0.8641 | micro_loss: 0.3500 | crf_loss: 0.1226 | edge_acc: 0.9353 | src_acc: 0.9591 | dst_acc: 0.9722
+[100/854]   macro_loss: 0.4163 | macro_acc: 0.8616 | micro_loss: 0.3371 | crf_loss: 0.1147 | edge_acc: 0.9390 | src_acc: 0.9642 | dst_acc: 0.9719
+[200/854]   macro_loss: 0.4120 | macro_acc: 0.8624 | micro_loss: 0.3334 | crf_loss: 0.1133 | edge_acc: 0.9394 | src_acc: 0.9645 | dst_acc: 0.9722
+[300/854]   macro_loss: 0.4135 | macro_acc: 0.8620 | micro_loss: 0.3350 | crf_loss: 0.1134 | edge_acc: 0.9393 | src_acc: 0.9645 | dst_acc: 0.9721
+[400/854]   macro_loss: 0.4121 | macro_acc: 0.8624 | micro_loss: 0.3347 | crf_loss: 0.1133 | edge_acc: 0.9393 | src_acc: 0.9644 | dst_acc: 0.9722
+[500/854]   macro_loss: 0.4120 | macro_acc: 0.8624 | micro_loss: 0.3343 | crf_loss: 0.1132 | edge_acc: 0.9393 | src_acc: 0.9646 | dst_acc: 0.9721
+[600/854]   macro_loss: 0.4099 | macro_acc: 0.8631 | micro_loss: 0.3320 | crf_loss: 0.1126 | edge_acc: 0.9397 | src_acc: 0.9648 | dst_acc: 0.9723
+[700/854]   macro_loss: 0.4116 | macro_acc: 0.8626 | micro_loss: 0.3329 | crf_loss: 0.1127 | edge_acc: 0.9396 | src_acc: 0.9648 | dst_acc: 0.9722
+[800/854]   macro_loss: 0.4112 | macro_acc: 0.8626 | micro_loss: 0.3319 | crf_loss: 0.1124 | edge_acc: 0.9398 | src_acc: 0.9649 | dst_acc: 0.9724
+Train:	  macro_loss: 0.4110 | macro_acc: 0.8627 | micro_loss: 0.3315 | crf_loss: 0.1123 | edge_acc: 0.9399 | src_acc: 0.9649 | dst_acc: 0.9724
+Val:	  macro_loss: 1.6754 | macro_acc: 0.6471 | micro_loss: 3.5485 | crf_loss: 0.8254 | edge_acc: 0.7193 | src_acc: 0.8116 | dst_acc: 0.8534 | forbid_rate: 0.0000
+Time:	 485.20 s (avg 485.23 s/epoch)
+GPU:	 20326 MB
+
+Epoch 15
+[  0/854]   macro_loss: 0.4329 | macro_acc: 0.8547 | micro_loss: 0.2963 | crf_loss: 0.1080 | edge_acc: 0.9450 | src_acc: 0.9650 | dst_acc: 0.9791
+[100/854]   macro_loss: 0.4144 | macro_acc: 0.8607 | micro_loss: 0.3364 | crf_loss: 0.1122 | edge_acc: 0.9386 | src_acc: 0.9643 | dst_acc: 0.9720
+[200/854]   macro_loss: 0.4060 | macro_acc: 0.8640 | micro_loss: 0.3244 | crf_loss: 0.1096 | edge_acc: 0.9414 | src_acc: 0.9658 | dst_acc: 0.9733
+[300/854]   macro_loss: 0.3998 | macro_acc: 0.8659 | micro_loss: 0.3166 | crf_loss: 0.1079 | edge_acc: 0.9426 | src_acc: 0.9664 | dst_acc: 0.9739
+[400/854]   macro_loss: 0.3981 | macro_acc: 0.8666 | micro_loss: 0.3152 | crf_loss: 0.1072 | edge_acc: 0.9431 | src_acc: 0.9667 | dst_acc: 0.9740
+[500/854]   macro_loss: 0.3962 | macro_acc: 0.8671 | micro_loss: 0.3131 | crf_loss: 0.1066 | edge_acc: 0.9435 | src_acc: 0.9670 | dst_acc: 0.9742
+[600/854]   macro_loss: 0.3961 | macro_acc: 0.8672 | micro_loss: 0.3124 | crf_loss: 0.1061 | edge_acc: 0.9437 | src_acc: 0.9672 | dst_acc: 0.9742
+[700/854]   macro_loss: 0.3945 | macro_acc: 0.8678 | micro_loss: 0.3106 | crf_loss: 0.1058 | edge_acc: 0.9439 | src_acc: 0.9673 | dst_acc: 0.9743
+[800/854]   macro_loss: 0.3933 | macro_acc: 0.8682 | micro_loss: 0.3097 | crf_loss: 0.1056 | edge_acc: 0.9441 | src_acc: 0.9674 | dst_acc: 0.9744
+Train:	  macro_loss: 0.3929 | macro_acc: 0.8682 | micro_loss: 0.3094 | crf_loss: 0.1055 | edge_acc: 0.9442 | src_acc: 0.9673 | dst_acc: 0.9745
+Val:	  macro_loss: 1.6813 | macro_acc: 0.6453 | micro_loss: 3.7082 | crf_loss: 0.8655 | edge_acc: 0.7189 | src_acc: 0.8136 | dst_acc: 0.8529 | forbid_rate: 0.0000
+Time:	 484.89 s (avg 485.21 s/epoch)
+GPU:	 20326 MB
+########## lr 0.00025 ##########
+
+Epoch 16
+[  0/854]   macro_loss: 0.3575 | macro_acc: 0.8831 | micro_loss: 0.2990 | crf_loss: 0.1029 | edge_acc: 0.9428 | src_acc: 0.9666 | dst_acc: 0.9750
+[100/854]   macro_loss: 0.3355 | macro_acc: 0.8863 | micro_loss: 0.2343 | crf_loss: 0.0838 | edge_acc: 0.9580 | src_acc: 0.9756 | dst_acc: 0.9811
+[200/854]   macro_loss: 0.3263 | macro_acc: 0.8894 | micro_loss: 0.2245 | crf_loss: 0.0810 | edge_acc: 0.9597 | src_acc: 0.9765 | dst_acc: 0.9818
+[300/854]   macro_loss: 0.3196 | macro_acc: 0.8915 | micro_loss: 0.2173 | crf_loss: 0.0787 | edge_acc: 0.9612 | src_acc: 0.9775 | dst_acc: 0.9824
+[400/854]   macro_loss: 0.3172 | macro_acc: 0.8922 | micro_loss: 0.2151 | crf_loss: 0.0781 | edge_acc: 0.9615 | src_acc: 0.9777 | dst_acc: 0.9825
+[500/854]   macro_loss: 0.3145 | macro_acc: 0.8931 | micro_loss: 0.2119 | crf_loss: 0.0771 | edge_acc: 0.9620 | src_acc: 0.9779 | dst_acc: 0.9828
+[600/854]   macro_loss: 0.3137 | macro_acc: 0.8934 | micro_loss: 0.2104 | crf_loss: 0.0766 | edge_acc: 0.9623 | src_acc: 0.9781 | dst_acc: 0.9829
+[700/854]   macro_loss: 0.3124 | macro_acc: 0.8938 | micro_loss: 0.2087 | crf_loss: 0.0760 | edge_acc: 0.9626 | src_acc: 0.9783 | dst_acc: 0.9830
+[800/854]   macro_loss: 0.3116 | macro_acc: 0.8940 | micro_loss: 0.2078 | crf_loss: 0.0757 | edge_acc: 0.9628 | src_acc: 0.9784 | dst_acc: 0.9831
+Train:	  macro_loss: 0.3107 | macro_acc: 0.8943 | micro_loss: 0.2071 | crf_loss: 0.0754 | edge_acc: 0.9630 | src_acc: 0.9785 | dst_acc: 0.9831
+Val:	  macro_loss: 1.7737 | macro_acc: 0.6483 | micro_loss: 4.1924 | crf_loss: 1.0678 | edge_acc: 0.7163 | src_acc: 0.8126 | dst_acc: 0.8511 | forbid_rate: 0.0000
+Time:	 485.53 s (avg 485.23 s/epoch)
+GPU:	 20326 MB
+
+Epoch 17
+[  0/854]   macro_loss: 0.2626 | macro_acc: 0.9053 | micro_loss: 0.1824 | crf_loss: 0.0670 | edge_acc: 0.9659 | src_acc: 0.9812 | dst_acc: 0.9828
+[100/854]   macro_loss: 0.2994 | macro_acc: 0.8975 | micro_loss: 0.1881 | crf_loss: 0.0694 | edge_acc: 0.9665 | src_acc: 0.9806 | dst_acc: 0.9848
+[200/854]   macro_loss: 0.2966 | macro_acc: 0.8985 | micro_loss: 0.1872 | crf_loss: 0.0690 | edge_acc: 0.9668 | src_acc: 0.9806 | dst_acc: 0.9851
+[300/854]   macro_loss: 0.2958 | macro_acc: 0.8986 | micro_loss: 0.1878 | crf_loss: 0.0691 | edge_acc: 0.9666 | src_acc: 0.9805 | dst_acc: 0.9849
+[400/854]   macro_loss: 0.2958 | macro_acc: 0.8987 | micro_loss: 0.1874 | crf_loss: 0.0690 | edge_acc: 0.9665 | src_acc: 0.9805 | dst_acc: 0.9849
+[500/854]   macro_loss: 0.2960 | macro_acc: 0.8986 | micro_loss: 0.1877 | crf_loss: 0.0690 | edge_acc: 0.9665 | src_acc: 0.9805 | dst_acc: 0.9849
+[600/854]   macro_loss: 0.2951 | macro_acc: 0.8988 | micro_loss: 0.1878 | crf_loss: 0.0691 | edge_acc: 0.9665 | src_acc: 0.9805 | dst_acc: 0.9849
+[700/854]   macro_loss: 0.2946 | macro_acc: 0.8990 | micro_loss: 0.1876 | crf_loss: 0.0689 | edge_acc: 0.9665 | src_acc: 0.9806 | dst_acc: 0.9849
+[800/854]   macro_loss: 0.2945 | macro_acc: 0.8990 | micro_loss: 0.1871 | crf_loss: 0.0687 | edge_acc: 0.9666 | src_acc: 0.9806 | dst_acc: 0.9849
+Train:	  macro_loss: 0.2945 | macro_acc: 0.8990 | micro_loss: 0.1874 | crf_loss: 0.0689 | edge_acc: 0.9666 | src_acc: 0.9806 | dst_acc: 0.9849
+Val:	  macro_loss: 1.7870 | macro_acc: 0.6555 | micro_loss: 4.1321 | crf_loss: 1.1027 | edge_acc: 0.7253 | src_acc: 0.8186 | dst_acc: 0.8570 | forbid_rate: 0.0000
+Time:	 484.95 s (avg 485.21 s/epoch)
+GPU:	 20326 MB
+
+Epoch 18
+[  0/854]   macro_loss: 0.2708 | macro_acc: 0.9069 | micro_loss: 0.1229 | crf_loss: 0.0467 | edge_acc: 0.9781 | src_acc: 0.9884 | dst_acc: 0.9897
+[100/854]   macro_loss: 0.2914 | macro_acc: 0.8998 | micro_loss: 0.1827 | crf_loss: 0.0672 | edge_acc: 0.9677 | src_acc: 0.9815 | dst_acc: 0.9852
+[200/854]   macro_loss: 0.2879 | macro_acc: 0.9009 | micro_loss: 0.1807 | crf_loss: 0.0666 | edge_acc: 0.9680 | src_acc: 0.9817 | dst_acc: 0.9854
+[300/854]   macro_loss: 0.2889 | macro_acc: 0.9008 | micro_loss: 0.1804 | crf_loss: 0.0665 | edge_acc: 0.9680 | src_acc: 0.9816 | dst_acc: 0.9855
+[400/854]   macro_loss: 0.2869 | macro_acc: 0.9015 | micro_loss: 0.1786 | crf_loss: 0.0659 | edge_acc: 0.9683 | src_acc: 0.9816 | dst_acc: 0.9857
+[500/854]   macro_loss: 0.2867 | macro_acc: 0.9015 | micro_loss: 0.1781 | crf_loss: 0.0655 | edge_acc: 0.9685 | src_acc: 0.9817 | dst_acc: 0.9858
+[600/854]   macro_loss: 0.2866 | macro_acc: 0.9015 | micro_loss: 0.1779 | crf_loss: 0.0655 | edge_acc: 0.9685 | src_acc: 0.9817 | dst_acc: 0.9858
+[700/854]   macro_loss: 0.2865 | macro_acc: 0.9015 | micro_loss: 0.1779 | crf_loss: 0.0654 | edge_acc: 0.9685 | src_acc: 0.9818 | dst_acc: 0.9857
+[800/854]   macro_loss: 0.2858 | macro_acc: 0.9019 | micro_loss: 0.1779 | crf_loss: 0.0655 | edge_acc: 0.9685 | src_acc: 0.9818 | dst_acc: 0.9857
+Train:	  macro_loss: 0.2856 | macro_acc: 0.9020 | micro_loss: 0.1778 | crf_loss: 0.0655 | edge_acc: 0.9685 | src_acc: 0.9818 | dst_acc: 0.9857
+Val:	  macro_loss: 1.8129 | macro_acc: 0.6506 | micro_loss: 4.3880 | crf_loss: 1.1667 | edge_acc: 0.7174 | src_acc: 0.8123 | dst_acc: 0.8540 | forbid_rate: 0.0000
+Time:	 485.02 s (avg 485.20 s/epoch)
+GPU:	 20326 MB
+########## lr 0.000125 ##########
+
+Epoch 19
+[  0/854]   macro_loss: 0.3138 | macro_acc: 0.8909 | micro_loss: 0.1676 | crf_loss: 0.0584 | edge_acc: 0.9700 | src_acc: 0.9822 | dst_acc: 0.9875
+[100/854]   macro_loss: 0.2608 | macro_acc: 0.9105 | micro_loss: 0.1490 | crf_loss: 0.0557 | edge_acc: 0.9735 | src_acc: 0.9844 | dst_acc: 0.9883
+[200/854]   macro_loss: 0.2558 | macro_acc: 0.9121 | micro_loss: 0.1429 | crf_loss: 0.0535 | edge_acc: 0.9749 | src_acc: 0.9854 | dst_acc: 0.9887
+[300/854]   macro_loss: 0.2532 | macro_acc: 0.9129 | micro_loss: 0.1400 | crf_loss: 0.0524 | edge_acc: 0.9754 | src_acc: 0.9858 | dst_acc: 0.9889
+[400/854]   macro_loss: 0.2532 | macro_acc: 0.9128 | micro_loss: 0.1387 | crf_loss: 0.0519 | edge_acc: 0.9756 | src_acc: 0.9860 | dst_acc: 0.9889
+[500/854]   macro_loss: 0.2527 | macro_acc: 0.9130 | micro_loss: 0.1373 | crf_loss: 0.0515 | edge_acc: 0.9758 | src_acc: 0.9862 | dst_acc: 0.9889
+[600/854]   macro_loss: 0.2514 | macro_acc: 0.9134 | micro_loss: 0.1362 | crf_loss: 0.0511 | edge_acc: 0.9760 | src_acc: 0.9863 | dst_acc: 0.9890
+[700/854]   macro_loss: 0.2510 | macro_acc: 0.9135 | micro_loss: 0.1358 | crf_loss: 0.0510 | edge_acc: 0.9761 | src_acc: 0.9863 | dst_acc: 0.9891
+[800/854]   macro_loss: 0.2500 | macro_acc: 0.9138 | micro_loss: 0.1350 | crf_loss: 0.0507 | edge_acc: 0.9763 | src_acc: 0.9864 | dst_acc: 0.9891
+Train:	  macro_loss: 0.2494 | macro_acc: 0.9141 | micro_loss: 0.1346 | crf_loss: 0.0505 | edge_acc: 0.9764 | src_acc: 0.9865 | dst_acc: 0.9892
+Val:	  macro_loss: 1.8830 | macro_acc: 0.6505 | micro_loss: 4.7573 | crf_loss: 1.3623 | edge_acc: 0.7200 | src_acc: 0.8164 | dst_acc: 0.8540 | forbid_rate: 0.0000
+Time:	 485.06 s (avg 485.19 s/epoch)
+GPU:	 20326 MB
+
+Epoch 20
+[  0/854]   macro_loss: 0.2564 | macro_acc: 0.9109 | micro_loss: 0.1250 | crf_loss: 0.0431 | edge_acc: 0.9750 | src_acc: 0.9906 | dst_acc: 0.9841
+[100/854]   macro_loss: 0.2427 | macro_acc: 0.9154 | micro_loss: 0.1286 | crf_loss: 0.0487 | edge_acc: 0.9775 | src_acc: 0.9870 | dst_acc: 0.9900
+[200/854]   macro_loss: 0.2448 | macro_acc: 0.9148 | micro_loss: 0.1291 | crf_loss: 0.0488 | edge_acc: 0.9775 | src_acc: 0.9870 | dst_acc: 0.9899
+[300/854]   macro_loss: 0.2448 | macro_acc: 0.9151 | micro_loss: 0.1286 | crf_loss: 0.0486 | edge_acc: 0.9775 | src_acc: 0.9872 | dst_acc: 0.9897
+[400/854]   macro_loss: 0.2437 | macro_acc: 0.9156 | micro_loss: 0.1280 | crf_loss: 0.0482 | edge_acc: 0.9777 | src_acc: 0.9873 | dst_acc: 0.9897
+[500/854]   macro_loss: 0.2428 | macro_acc: 0.9160 | micro_loss: 0.1276 | crf_loss: 0.0480 | edge_acc: 0.9777 | src_acc: 0.9874 | dst_acc: 0.9897
+[600/854]   macro_loss: 0.2423 | macro_acc: 0.9161 | micro_loss: 0.1271 | crf_loss: 0.0479 | edge_acc: 0.9778 | src_acc: 0.9874 | dst_acc: 0.9898
+[700/854]   macro_loss: 0.2423 | macro_acc: 0.9162 | micro_loss: 0.1275 | crf_loss: 0.0480 | edge_acc: 0.9778 | src_acc: 0.9874 | dst_acc: 0.9898
+[800/854]   macro_loss: 0.2416 | macro_acc: 0.9164 | micro_loss: 0.1271 | crf_loss: 0.0479 | edge_acc: 0.9778 | src_acc: 0.9874 | dst_acc: 0.9898
+Train:	  macro_loss: 0.2414 | macro_acc: 0.9165 | micro_loss: 0.1268 | crf_loss: 0.0478 | edge_acc: 0.9779 | src_acc: 0.9874 | dst_acc: 0.9898
+Val:	  macro_loss: 1.9013 | macro_acc: 0.6524 | micro_loss: 4.8263 | crf_loss: 1.4088 | edge_acc: 0.7181 | src_acc: 0.8141 | dst_acc: 0.8531 | forbid_rate: 0.0000
+Time:	 484.97 s (avg 485.18 s/epoch)
+GPU:	 20326 MB
+########## Saved Model ##########
+
+Epoch 21
+[  0/854]   macro_loss: 0.2197 | macro_acc: 0.9244 | micro_loss: 0.1222 | crf_loss: 0.0481 | edge_acc: 0.9781 | src_acc: 0.9878 | dst_acc: 0.9903
+[100/854]   macro_loss: 0.2334 | macro_acc: 0.9189 | micro_loss: 0.1186 | crf_loss: 0.0458 | edge_acc: 0.9792 | src_acc: 0.9880 | dst_acc: 0.9908
+[200/854]   macro_loss: 0.2353 | macro_acc: 0.9186 | micro_loss: 0.1195 | crf_loss: 0.0457 | edge_acc: 0.9791 | src_acc: 0.9880 | dst_acc: 0.9906
+[300/854]   macro_loss: 0.2358 | macro_acc: 0.9184 | micro_loss: 0.1208 | crf_loss: 0.0460 | edge_acc: 0.9789 | src_acc: 0.9880 | dst_acc: 0.9904
+[400/854]   macro_loss: 0.2363 | macro_acc: 0.9181 | micro_loss: 0.1211 | crf_loss: 0.0460 | edge_acc: 0.9789 | src_acc: 0.9880 | dst_acc: 0.9903
+[500/854]   macro_loss: 0.2364 | macro_acc: 0.9181 | micro_loss: 0.1212 | crf_loss: 0.0459 | edge_acc: 0.9788 | src_acc: 0.9880 | dst_acc: 0.9903
+[600/854]   macro_loss: 0.2369 | macro_acc: 0.9179 | micro_loss: 0.1211 | crf_loss: 0.0458 | edge_acc: 0.9789 | src_acc: 0.9880 | dst_acc: 0.9903
+[700/854]   macro_loss: 0.2369 | macro_acc: 0.9179 | micro_loss: 0.1214 | crf_loss: 0.0459 | edge_acc: 0.9788 | src_acc: 0.9879 | dst_acc: 0.9903
+[800/854]   macro_loss: 0.2361 | macro_acc: 0.9181 | micro_loss: 0.1210 | crf_loss: 0.0458 | edge_acc: 0.9789 | src_acc: 0.9880 | dst_acc: 0.9903
+Train:	  macro_loss: 0.2362 | macro_acc: 0.9182 | micro_loss: 0.1209 | crf_loss: 0.0457 | edge_acc: 0.9789 | src_acc: 0.9880 | dst_acc: 0.9903
+Val:	  macro_loss: 1.9398 | macro_acc: 0.6525 | micro_loss: 4.9729 | crf_loss: 1.4632 | edge_acc: 0.7178 | src_acc: 0.8151 | dst_acc: 0.8518 | forbid_rate: 0.0000
+Time:	 485.45 s (avg 485.19 s/epoch)
+GPU:	 20326 MB
+########## lr 6.25e-05 ##########
+
+Epoch 22
+[  0/854]   macro_loss: 0.1924 | macro_acc: 0.9303 | micro_loss: 0.1013 | crf_loss: 0.0406 | edge_acc: 0.9822 | src_acc: 0.9891 | dst_acc: 0.9928
+[100/854]   macro_loss: 0.2239 | macro_acc: 0.9230 | micro_loss: 0.1073 | crf_loss: 0.0411 | edge_acc: 0.9815 | src_acc: 0.9894 | dst_acc: 0.9916
+[200/854]   macro_loss: 0.2220 | macro_acc: 0.9234 | micro_loss: 0.1058 | crf_loss: 0.0406 | edge_acc: 0.9817 | src_acc: 0.9897 | dst_acc: 0.9916
+[300/854]   macro_loss: 0.2204 | macro_acc: 0.9238 | micro_loss: 0.1040 | crf_loss: 0.0398 | edge_acc: 0.9821 | src_acc: 0.9899 | dst_acc: 0.9917
+[400/854]   macro_loss: 0.2203 | macro_acc: 0.9239 | micro_loss: 0.1037 | crf_loss: 0.0396 | edge_acc: 0.9821 | src_acc: 0.9899 | dst_acc: 0.9917
+[500/854]   macro_loss: 0.2196 | macro_acc: 0.9241 | micro_loss: 0.1030 | crf_loss: 0.0393 | edge_acc: 0.9822 | src_acc: 0.9900 | dst_acc: 0.9917
+[600/854]   macro_loss: 0.2195 | macro_acc: 0.9240 | micro_loss: 0.1025 | crf_loss: 0.0391 | edge_acc: 0.9823 | src_acc: 0.9901 | dst_acc: 0.9918
+[700/854]   macro_loss: 0.2196 | macro_acc: 0.9240 | micro_loss: 0.1022 | crf_loss: 0.0390 | edge_acc: 0.9823 | src_acc: 0.9901 | dst_acc: 0.9918
+[800/854]   macro_loss: 0.2197 | macro_acc: 0.9239 | micro_loss: 0.1025 | crf_loss: 0.0390 | edge_acc: 0.9823 | src_acc: 0.9901 | dst_acc: 0.9917
+Train:	  macro_loss: 0.2192 | macro_acc: 0.9241 | micro_loss: 0.1019 | crf_loss: 0.0388 | edge_acc: 0.9824 | src_acc: 0.9902 | dst_acc: 0.9918
+Val:	  macro_loss: 1.9739 | macro_acc: 0.6536 | micro_loss: 5.3579 | crf_loss: 1.6574 | edge_acc: 0.7182 | src_acc: 0.8149 | dst_acc: 0.8528 | forbid_rate: 0.0000
+Time:	 484.98 s (avg 485.18 s/epoch)
+GPU:	 20326 MB
+
+Epoch 23
+[  0/854]   macro_loss: 0.2321 | macro_acc: 0.9169 | micro_loss: 0.0989 | crf_loss: 0.0394 | edge_acc: 0.9800 | src_acc: 0.9909 | dst_acc: 0.9881
+[100/854]   macro_loss: 0.2121 | macro_acc: 0.9260 | micro_loss: 0.0980 | crf_loss: 0.0377 | edge_acc: 0.9831 | src_acc: 0.9908 | dst_acc: 0.9919
+[200/854]   macro_loss: 0.2136 | macro_acc: 0.9258 | micro_loss: 0.0976 | crf_loss: 0.0375 | edge_acc: 0.9830 | src_acc: 0.9906 | dst_acc: 0.9920
+[300/854]   macro_loss: 0.2137 | macro_acc: 0.9259 | micro_loss: 0.0969 | crf_loss: 0.0373 | edge_acc: 0.9832 | src_acc: 0.9907 | dst_acc: 0.9921
+[400/854]   macro_loss: 0.2140 | macro_acc: 0.9259 | micro_loss: 0.0973 | crf_loss: 0.0373 | edge_acc: 0.9832 | src_acc: 0.9907 | dst_acc: 0.9921
+[500/854]   macro_loss: 0.2140 | macro_acc: 0.9258 | micro_loss: 0.0971 | crf_loss: 0.0373 | edge_acc: 0.9832 | src_acc: 0.9907 | dst_acc: 0.9921
+[600/854]   macro_loss: 0.2142 | macro_acc: 0.9257 | micro_loss: 0.0971 | crf_loss: 0.0372 | edge_acc: 0.9832 | src_acc: 0.9907 | dst_acc: 0.9920
+[700/854]   macro_loss: 0.2141 | macro_acc: 0.9257 | micro_loss: 0.0971 | crf_loss: 0.0372 | edge_acc: 0.9832 | src_acc: 0.9907 | dst_acc: 0.9920
+[800/854]   macro_loss: 0.2142 | macro_acc: 0.9257 | micro_loss: 0.0970 | crf_loss: 0.0371 | edge_acc: 0.9832 | src_acc: 0.9908 | dst_acc: 0.9920
+Train:	  macro_loss: 0.2141 | macro_acc: 0.9257 | micro_loss: 0.0972 | crf_loss: 0.0371 | edge_acc: 0.9831 | src_acc: 0.9907 | dst_acc: 0.9920
+Val:	  macro_loss: 2.0008 | macro_acc: 0.6497 | micro_loss: 5.3314 | crf_loss: 1.6716 | edge_acc: 0.7179 | src_acc: 0.8147 | dst_acc: 0.8519 | forbid_rate: 0.0000
+Time:	 485.03 s (avg 485.18 s/epoch)
+GPU:	 20326 MB
+
+Epoch 24
+[  0/854]   macro_loss: 0.1947 | macro_acc: 0.9319 | micro_loss: 0.0945 | crf_loss: 0.0359 | edge_acc: 0.9853 | src_acc: 0.9934 | dst_acc: 0.9909
+[100/854]   macro_loss: 0.2126 | macro_acc: 0.9262 | micro_loss: 0.0940 | crf_loss: 0.0362 | edge_acc: 0.9835 | src_acc: 0.9908 | dst_acc: 0.9923
+[200/854]   macro_loss: 0.2123 | macro_acc: 0.9262 | micro_loss: 0.0944 | crf_loss: 0.0361 | edge_acc: 0.9837 | src_acc: 0.9909 | dst_acc: 0.9923
+[300/854]   macro_loss: 0.2124 | macro_acc: 0.9261 | micro_loss: 0.0949 | crf_loss: 0.0362 | edge_acc: 0.9836 | src_acc: 0.9909 | dst_acc: 0.9923
+[400/854]   macro_loss: 0.2123 | macro_acc: 0.9262 | micro_loss: 0.0945 | crf_loss: 0.0361 | edge_acc: 0.9837 | src_acc: 0.9909 | dst_acc: 0.9923
+[500/854]   macro_loss: 0.2122 | macro_acc: 0.9264 | micro_loss: 0.0945 | crf_loss: 0.0361 | edge_acc: 0.9837 | src_acc: 0.9909 | dst_acc: 0.9924
+[600/854]   macro_loss: 0.2121 | macro_acc: 0.9264 | micro_loss: 0.0946 | crf_loss: 0.0362 | edge_acc: 0.9837 | src_acc: 0.9909 | dst_acc: 0.9923
+[700/854]   macro_loss: 0.2123 | macro_acc: 0.9263 | micro_loss: 0.0948 | crf_loss: 0.0362 | edge_acc: 0.9837 | src_acc: 0.9910 | dst_acc: 0.9923
+[800/854]   macro_loss: 0.2121 | macro_acc: 0.9263 | micro_loss: 0.0948 | crf_loss: 0.0362 | edge_acc: 0.9837 | src_acc: 0.9910 | dst_acc: 0.9923
+Train:	  macro_loss: 0.2118 | macro_acc: 0.9264 | micro_loss: 0.0946 | crf_loss: 0.0361 | edge_acc: 0.9838 | src_acc: 0.9910 | dst_acc: 0.9923
+Val:	  macro_loss: 2.0087 | macro_acc: 0.6540 | micro_loss: 5.4220 | crf_loss: 1.7278 | edge_acc: 0.7198 | src_acc: 0.8155 | dst_acc: 0.8543 | forbid_rate: 0.0000
+Time:	 485.20 s (avg 485.18 s/epoch)
+GPU:	 20326 MB
+########## lr 3.125e-05 ##########
+
+Epoch 25
+[  0/854]   macro_loss: 0.2401 | macro_acc: 0.9181 | micro_loss: 0.1038 | crf_loss: 0.0413 | edge_acc: 0.9803 | src_acc: 0.9903 | dst_acc: 0.9897
+[100/854]   macro_loss: 0.2061 | macro_acc: 0.9283 | micro_loss: 0.0882 | crf_loss: 0.0337 | edge_acc: 0.9848 | src_acc: 0.9918 | dst_acc: 0.9927
+[200/854]   macro_loss: 0.2063 | macro_acc: 0.9283 | micro_loss: 0.0886 | crf_loss: 0.0338 | edge_acc: 0.9849 | src_acc: 0.9918 | dst_acc: 0.9927
+[300/854]   macro_loss: 0.2057 | macro_acc: 0.9282 | micro_loss: 0.0879 | crf_loss: 0.0336 | edge_acc: 0.9851 | src_acc: 0.9918 | dst_acc: 0.9929
+[400/854]   macro_loss: 0.2050 | macro_acc: 0.9285 | micro_loss: 0.0871 | crf_loss: 0.0334 | edge_acc: 0.9851 | src_acc: 0.9919 | dst_acc: 0.9929
+[500/854]   macro_loss: 0.2048 | macro_acc: 0.9287 | micro_loss: 0.0871 | crf_loss: 0.0334 | edge_acc: 0.9851 | src_acc: 0.9918 | dst_acc: 0.9929
+[600/854]   macro_loss: 0.2039 | macro_acc: 0.9289 | micro_loss: 0.0867 | crf_loss: 0.0333 | edge_acc: 0.9851 | src_acc: 0.9919 | dst_acc: 0.9929
+[700/854]   macro_loss: 0.2041 | macro_acc: 0.9289 | micro_loss: 0.0870 | crf_loss: 0.0333 | edge_acc: 0.9851 | src_acc: 0.9919 | dst_acc: 0.9929
+[800/854]   macro_loss: 0.2036 | macro_acc: 0.9292 | micro_loss: 0.0867 | crf_loss: 0.0332 | edge_acc: 0.9851 | src_acc: 0.9919 | dst_acc: 0.9929
+Train:	  macro_loss: 0.2035 | macro_acc: 0.9292 | micro_loss: 0.0868 | crf_loss: 0.0332 | edge_acc: 0.9851 | src_acc: 0.9919 | dst_acc: 0.9929
+Val:	  macro_loss: 2.0358 | macro_acc: 0.6536 | micro_loss: 5.6217 | crf_loss: 1.8083 | edge_acc: 0.7181 | src_acc: 0.8155 | dst_acc: 0.8529 | forbid_rate: 0.0000
+Time:	 485.07 s (avg 485.17 s/epoch)
+GPU:	 20326 MB
+
+Epoch 26
+[  0/854]   macro_loss: 0.1631 | macro_acc: 0.9391 | micro_loss: 0.0649 | crf_loss: 0.0269 | edge_acc: 0.9897 | src_acc: 0.9962 | dst_acc: 0.9931
+[100/854]   macro_loss: 0.2027 | macro_acc: 0.9286 | micro_loss: 0.0835 | crf_loss: 0.0319 | edge_acc: 0.9858 | src_acc: 0.9920 | dst_acc: 0.9934
+[200/854]   macro_loss: 0.2025 | macro_acc: 0.9291 | micro_loss: 0.0841 | crf_loss: 0.0322 | edge_acc: 0.9857 | src_acc: 0.9920 | dst_acc: 0.9933
+[300/854]   macro_loss: 0.2015 | macro_acc: 0.9294 | micro_loss: 0.0841 | crf_loss: 0.0322 | edge_acc: 0.9856 | src_acc: 0.9920 | dst_acc: 0.9932
+[400/854]   macro_loss: 0.2011 | macro_acc: 0.9296 | micro_loss: 0.0837 | crf_loss: 0.0322 | edge_acc: 0.9856 | src_acc: 0.9920 | dst_acc: 0.9932
+[500/854]   macro_loss: 0.2003 | macro_acc: 0.9300 | micro_loss: 0.0835 | crf_loss: 0.0321 | edge_acc: 0.9857 | src_acc: 0.9921 | dst_acc: 0.9932
+[600/854]   macro_loss: 0.2007 | macro_acc: 0.9299 | micro_loss: 0.0842 | crf_loss: 0.0324 | edge_acc: 0.9855 | src_acc: 0.9920 | dst_acc: 0.9931
+[700/854]   macro_loss: 0.2011 | macro_acc: 0.9298 | micro_loss: 0.0844 | crf_loss: 0.0324 | edge_acc: 0.9855 | src_acc: 0.9920 | dst_acc: 0.9931
+[800/854]   macro_loss: 0.2007 | macro_acc: 0.9300 | micro_loss: 0.0843 | crf_loss: 0.0324 | edge_acc: 0.9856 | src_acc: 0.9920 | dst_acc: 0.9931
+Train:	  macro_loss: 0.2008 | macro_acc: 0.9300 | micro_loss: 0.0843 | crf_loss: 0.0323 | edge_acc: 0.9856 | src_acc: 0.9921 | dst_acc: 0.9931
+Val:	  macro_loss: 2.0479 | macro_acc: 0.6518 | micro_loss: 5.6838 | crf_loss: 1.8530 | edge_acc: 0.7170 | src_acc: 0.8147 | dst_acc: 0.8511 | forbid_rate: 0.0000
+Time:	 485.25 s (avg 485.18 s/epoch)
+GPU:	 20326 MB
+
+Epoch 27
+[  0/854]   macro_loss: 0.1790 | macro_acc: 0.9394 | micro_loss: 0.0608 | crf_loss: 0.0260 | edge_acc: 0.9897 | src_acc: 0.9966 | dst_acc: 0.9931
+[100/854]   macro_loss: 0.2007 | macro_acc: 0.9305 | micro_loss: 0.0852 | crf_loss: 0.0331 | edge_acc: 0.9854 | src_acc: 0.9921 | dst_acc: 0.9930
+[200/854]   macro_loss: 0.1981 | macro_acc: 0.9314 | micro_loss: 0.0829 | crf_loss: 0.0320 | edge_acc: 0.9858 | src_acc: 0.9922 | dst_acc: 0.9933
+[300/854]   macro_loss: 0.1984 | macro_acc: 0.9312 | micro_loss: 0.0826 | crf_loss: 0.0319 | edge_acc: 0.9859 | src_acc: 0.9923 | dst_acc: 0.9933
+[400/854]   macro_loss: 0.1984 | macro_acc: 0.9310 | micro_loss: 0.0826 | crf_loss: 0.0319 | edge_acc: 0.9859 | src_acc: 0.9923 | dst_acc: 0.9933
+[500/854]   macro_loss: 0.1990 | macro_acc: 0.9309 | micro_loss: 0.0825 | crf_loss: 0.0318 | edge_acc: 0.9859 | src_acc: 0.9922 | dst_acc: 0.9933
+[600/854]   macro_loss: 0.1988 | macro_acc: 0.9310 | micro_loss: 0.0826 | crf_loss: 0.0318 | edge_acc: 0.9859 | src_acc: 0.9922 | dst_acc: 0.9933
+[700/854]   macro_loss: 0.1989 | macro_acc: 0.9309 | micro_loss: 0.0825 | crf_loss: 0.0318 | edge_acc: 0.9859 | src_acc: 0.9923 | dst_acc: 0.9933
+[800/854]   macro_loss: 0.1989 | macro_acc: 0.9308 | micro_loss: 0.0825 | crf_loss: 0.0318 | edge_acc: 0.9859 | src_acc: 0.9923 | dst_acc: 0.9933
+Train:	  macro_loss: 0.1989 | macro_acc: 0.9308 | micro_loss: 0.0824 | crf_loss: 0.0317 | edge_acc: 0.9859 | src_acc: 0.9923 | dst_acc: 0.9933
+Val:	  macro_loss: 2.0514 | macro_acc: 0.6512 | micro_loss: 5.7226 | crf_loss: 1.8762 | edge_acc: 0.7173 | src_acc: 0.8147 | dst_acc: 0.8512 | forbid_rate: 0.0000
+Time:	 485.26 s (avg 485.18 s/epoch)
+GPU:	 20326 MB
+########## lr 1.5625e-05 ##########
+
+Epoch 28
+[  0/854]   macro_loss: 0.1628 | macro_acc: 0.9487 | micro_loss: 0.0587 | crf_loss: 0.0231 | edge_acc: 0.9900 | src_acc: 0.9925 | dst_acc: 0.9975
+[100/854]   macro_loss: 0.1928 | macro_acc: 0.9328 | micro_loss: 0.0768 | crf_loss: 0.0299 | edge_acc: 0.9869 | src_acc: 0.9928 | dst_acc: 0.9939
+[200/854]   macro_loss: 0.1933 | macro_acc: 0.9328 | micro_loss: 0.0767 | crf_loss: 0.0299 | edge_acc: 0.9869 | src_acc: 0.9928 | dst_acc: 0.9938
+[300/854]   macro_loss: 0.1945 | macro_acc: 0.9324 | micro_loss: 0.0777 | crf_loss: 0.0301 | edge_acc: 0.9867 | src_acc: 0.9927 | dst_acc: 0.9937
+[400/854]   macro_loss: 0.1951 | macro_acc: 0.9324 | micro_loss: 0.0783 | crf_loss: 0.0302 | edge_acc: 0.9866 | src_acc: 0.9926 | dst_acc: 0.9937
+[500/854]   macro_loss: 0.1955 | macro_acc: 0.9323 | micro_loss: 0.0789 | crf_loss: 0.0304 | edge_acc: 0.9865 | src_acc: 0.9927 | dst_acc: 0.9936
+[600/854]   macro_loss: 0.1952 | macro_acc: 0.9324 | micro_loss: 0.0783 | crf_loss: 0.0302 | edge_acc: 0.9866 | src_acc: 0.9927 | dst_acc: 0.9936
+[700/854]   macro_loss: 0.1954 | macro_acc: 0.9323 | micro_loss: 0.0785 | crf_loss: 0.0302 | edge_acc: 0.9865 | src_acc: 0.9927 | dst_acc: 0.9935
+[800/854]   macro_loss: 0.1951 | macro_acc: 0.9323 | micro_loss: 0.0782 | crf_loss: 0.0301 | edge_acc: 0.9866 | src_acc: 0.9927 | dst_acc: 0.9936
+Train:	  macro_loss: 0.1952 | macro_acc: 0.9323 | micro_loss: 0.0783 | crf_loss: 0.0301 | edge_acc: 0.9866 | src_acc: 0.9927 | dst_acc: 0.9936
+Val:	  macro_loss: 2.0595 | macro_acc: 0.6521 | micro_loss: 5.7568 | crf_loss: 1.9012 | edge_acc: 0.7167 | src_acc: 0.8139 | dst_acc: 0.8518 | forbid_rate: 0.0000
+Time:	 485.08 s (avg 485.18 s/epoch)
+GPU:	 20326 MB
+
+Epoch 29
+[  0/854]   macro_loss: 0.2055 | macro_acc: 0.9319 | micro_loss: 0.0810 | crf_loss: 0.0293 | edge_acc: 0.9837 | src_acc: 0.9941 | dst_acc: 0.9894
+[100/854]   macro_loss: 0.1946 | macro_acc: 0.9325 | micro_loss: 0.0783 | crf_loss: 0.0301 | edge_acc: 0.9865 | src_acc: 0.9927 | dst_acc: 0.9935
+[200/854]   macro_loss: 0.1930 | macro_acc: 0.9329 | micro_loss: 0.0766 | crf_loss: 0.0295 | edge_acc: 0.9869 | src_acc: 0.9929 | dst_acc: 0.9937
+[300/854]   macro_loss: 0.1932 | macro_acc: 0.9329 | micro_loss: 0.0767 | crf_loss: 0.0296 | edge_acc: 0.9868 | src_acc: 0.9928 | dst_acc: 0.9937
+[400/854]   macro_loss: 0.1937 | macro_acc: 0.9326 | micro_loss: 0.0765 | crf_loss: 0.0296 | edge_acc: 0.9869 | src_acc: 0.9928 | dst_acc: 0.9938
+[500/854]   macro_loss: 0.1939 | macro_acc: 0.9326 | micro_loss: 0.0767 | crf_loss: 0.0296 | edge_acc: 0.9869 | src_acc: 0.9929 | dst_acc: 0.9937
+[600/854]   macro_loss: 0.1943 | macro_acc: 0.9325 | micro_loss: 0.0765 | crf_loss: 0.0295 | edge_acc: 0.9869 | src_acc: 0.9929 | dst_acc: 0.9937
+[700/854]   macro_loss: 0.1945 | macro_acc: 0.9325 | micro_loss: 0.0766 | crf_loss: 0.0295 | edge_acc: 0.9869 | src_acc: 0.9929 | dst_acc: 0.9937
+[800/854]   macro_loss: 0.1944 | macro_acc: 0.9325 | micro_loss: 0.0767 | crf_loss: 0.0295 | edge_acc: 0.9869 | src_acc: 0.9929 | dst_acc: 0.9937
+Train:	  macro_loss: 0.1945 | macro_acc: 0.9325 | micro_loss: 0.0768 | crf_loss: 0.0296 | edge_acc: 0.9869 | src_acc: 0.9929 | dst_acc: 0.9937
+Val:	  macro_loss: 2.0675 | macro_acc: 0.6516 | micro_loss: 5.7882 | crf_loss: 1.9140 | edge_acc: 0.7178 | src_acc: 0.8145 | dst_acc: 0.8519 | forbid_rate: 0.0000
+Time:	 485.06 s (avg 485.17 s/epoch)
+GPU:	 20326 MB
+
+Epoch 30
+[  0/854]   macro_loss: 0.1935 | macro_acc: 0.9322 | micro_loss: 0.0854 | crf_loss: 0.0314 | edge_acc: 0.9869 | src_acc: 0.9934 | dst_acc: 0.9934
+[100/854]   macro_loss: 0.1930 | macro_acc: 0.9333 | micro_loss: 0.0773 | crf_loss: 0.0296 | edge_acc: 0.9868 | src_acc: 0.9929 | dst_acc: 0.9935
+[200/854]   macro_loss: 0.1933 | macro_acc: 0.9328 | micro_loss: 0.0767 | crf_loss: 0.0293 | edge_acc: 0.9869 | src_acc: 0.9930 | dst_acc: 0.9936
+[300/854]   macro_loss: 0.1934 | macro_acc: 0.9327 | micro_loss: 0.0762 | crf_loss: 0.0294 | edge_acc: 0.9869 | src_acc: 0.9929 | dst_acc: 0.9937
+[400/854]   macro_loss: 0.1936 | macro_acc: 0.9327 | micro_loss: 0.0764 | crf_loss: 0.0294 | edge_acc: 0.9869 | src_acc: 0.9929 | dst_acc: 0.9937
+[500/854]   macro_loss: 0.1926 | macro_acc: 0.9330 | micro_loss: 0.0762 | crf_loss: 0.0293 | edge_acc: 0.9870 | src_acc: 0.9930 | dst_acc: 0.9937
+[600/854]   macro_loss: 0.1927 | macro_acc: 0.9330 | micro_loss: 0.0763 | crf_loss: 0.0294 | edge_acc: 0.9870 | src_acc: 0.9929 | dst_acc: 0.9938
+[700/854]   macro_loss: 0.1934 | macro_acc: 0.9329 | micro_loss: 0.0767 | crf_loss: 0.0295 | edge_acc: 0.9870 | src_acc: 0.9929 | dst_acc: 0.9937
+[800/854]   macro_loss: 0.1932 | macro_acc: 0.9329 | micro_loss: 0.0765 | crf_loss: 0.0295 | edge_acc: 0.9870 | src_acc: 0.9929 | dst_acc: 0.9937
+Train:	  macro_loss: 0.1935 | macro_acc: 0.9327 | micro_loss: 0.0767 | crf_loss: 0.0295 | edge_acc: 0.9869 | src_acc: 0.9929 | dst_acc: 0.9937
+Val:	  macro_loss: 2.0815 | macro_acc: 0.6512 | micro_loss: 5.9286 | crf_loss: 1.9703 | edge_acc: 0.7167 | src_acc: 0.8143 | dst_acc: 0.8516 | forbid_rate: 0.0000
+Time:	 485.29 s (avg 485.18 s/epoch)
+GPU:	 20326 MB
+########## Saved Model ##########
+Best Val Loss: 4.1183
