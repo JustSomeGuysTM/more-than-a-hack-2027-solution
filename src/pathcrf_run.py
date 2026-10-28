@@ -1,6 +1,6 @@
 """Run a PathCRF checkpoint on BAR-ATH (data_raw/pathcrf/BARATH.parquet from src/pathcrf_io.py).
 
-    ~/pathcrf/.venv/bin/python src/pathcrf_run.py [--trial 140] [--alive evaluation/results/v2.csv]
+    ~/pathcrf/.venv/bin/python src/pathcrf_run.py [--trial 140] [--alive evaluation/results/seq.csv]
     -> evaluation/results/pathcrf.csv : PathCRF team on alive frames, D from --alive, X for alive frames PathCRF did not cover
 """
 import argparse, os, sys, time
@@ -49,5 +49,5 @@ def score_external(trial, gid, dfl=False):
     print(f"PathCRF trial {trial} on {'DFL' if dfl else 'PFF'} {gid}: spellF1 {r['spell_f1_mean']:.3f} macroF1 {r['macro_f1']:.3f} spells {r['n_pred_spells']:.0f} (gt {r['n_gt_spells']:.0f}), frames with a team {cov:.2f}, alive frame acc {(pc[L != 'D'] == L[L != 'D']).mean():.3f}")
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("--trial", type=int, default=140); ap.add_argument("--alive", default=os.path.join(ROOT, "evaluation/results/v2.csv")); ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/pathcrf.csv")); ap.add_argument("--pff", help="score the checkpoint on this PFF game id instead"); ap.add_argument("--dfl", help="score the checkpoint on this DFL match id (held-out fold) instead")
+    ap = argparse.ArgumentParser(); ap.add_argument("--trial", type=int, default=140); ap.add_argument("--alive", default=os.path.join(ROOT, "evaluation/results/seq.csv")); ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/pathcrf.csv")); ap.add_argument("--pff", help="score the checkpoint on this PFF game id instead"); ap.add_argument("--dfl", help="score the checkpoint on this DFL match id (held-out fold) instead")
     a = ap.parse_args(); score_external(a.trial, a.pff) if a.pff else score_external(a.trial, a.dfl, dfl=True) if a.dfl else main(a.trial, a.alive, a.out)

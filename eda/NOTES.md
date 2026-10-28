@@ -140,6 +140,10 @@ a model trained for 1-s gaps suits it better; whether that holds over the full m
 `eda/dead_diag.py` tests (train on the old degradation, test on the real one): **0.416 / 0.781** with 178 false
 stoppages, vs 0.438 / 0.828 trained on the real one. Settled: the deployed HGB and BiGRU are trained on the realistic
 degradation; the public window was flattering the old model because its ball is almost complete.
+BiGRU retrained on it: public window **0.625 / 0.879**, 15 spells, dead-frame F1 0.968 (HGB 0.946), and as PathCRF's
+dead-ball source **0.605 / 0.875** vs 0.582 / 0.827 with the HGB. On DFL its own dead balls were already at least as good
+(BiGRU 0.464 vs BiGRU-H/A + HGB-D 0.453). **Dead-ball source switched to the BiGRU** (`pathcrf_run.py --alive` default,
+`pod/pathcrf_setup.sh`); candidate file `evaluation/results/pathcrf.csv` = authors' PathCRF + BiGRU dead balls.
 
 ### Goalkeeper for PathCRF: already handled (2026-10-28)
 PathCRF finds the keeper itself per episode (`datatools/utils.detect_keepers`: the player whose mean x is farthest from

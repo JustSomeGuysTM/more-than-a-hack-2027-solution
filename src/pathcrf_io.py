@@ -74,4 +74,4 @@ def main(alive_csv, source="tactical"):
         n = np.isfinite(df[[f"{side}_{k}_x" for k in range(N_TRACK)]].values).sum(1); print(f"{side}: players per alive frame mean {n[al].mean():.1f}, p10 {np.percentile(n[al], 10):.0f}")
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("--alive", default=os.path.join(ROOT, "evaluation/results/v2.csv")); ap.add_argument("--source", default="tactical"); a = ap.parse_args(); main(a.alive, a.source)
+    ap = argparse.ArgumentParser(); ap.add_argument("--alive", default=os.path.join(ROOT, "evaluation/results/seq.csv")); ap.add_argument("--source", default="tactical"); a = ap.parse_args(); main(a.alive, a.source)

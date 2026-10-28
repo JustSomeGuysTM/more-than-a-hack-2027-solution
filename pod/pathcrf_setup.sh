@@ -11,6 +11,6 @@ PC=~/pathcrf; TRIAL=${TRIAL:-400}; PY=${PYTHON:-python3}
 git -C $PC checkout -q 1b7c6f8 && { git -C $PC apply "$PWD/pod/pathcrf.patch" 2>/dev/null || echo "pathcrf patch already applied"; }
 [ -x $PC/.venv/bin/python ] || { $PY -m venv $PC/.venv && $PC/.venv/bin/pip install -q -r $PC/requirements.txt torch torch_geometric rdp pyarrow; }
 [ -d $PC/saved/$TRIAL ] || { gh release download pathcrf-weights -R JustSomeGuysTM/more-than-a-hack-2027-solution -p "$TRIAL.tgz" -O - | tar xz -C $PC/saved; }
-[ -f evaluation/results/v2.csv ] || .venv/bin/python src/v2.py --out evaluation/results/v2.csv      # dead-ball source
+[ -f evaluation/results/seq.csv ] || .venv/bin/python src/seq.py      # dead-ball source (BiGRU, weights committed)
 [ -f data_raw/pathcrf/BARATH.parquet ] || .venv/bin/python src/pathcrf_io.py
-$PC/.venv/bin/python src/pathcrf_run.py --trial $TRIAL --alive evaluation/results/v2.csv
+$PC/.venv/bin/python src/pathcrf_run.py --trial $TRIAL --alive evaluation/results/seq.csv

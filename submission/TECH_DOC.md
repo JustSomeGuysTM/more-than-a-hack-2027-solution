@@ -9,7 +9,7 @@ probabilities for *home / away / dead*; (2) a Viterbi decoder with a switch pena
 into whole possession spells, because the metric (spellF1) scores possessions, not frames. On top
 of that we run **PathCRF**, a published possession-path model that predicts the ball carrier from
 player movement alone (no ball needed), and take its home/away call on alive frames while our own
-model decides when the ball is dead. Everything is trained on public data from *other* matches
+BiGRU decides when the ball is dead. Everything is trained on public data from *other* matches
 with real possession labels; nothing is tuned on the 5 public minutes of this game and no hand
 labels of this game exist anywhere in the pipeline.
 
@@ -29,7 +29,7 @@ tactical ATD (25 fps, 46 slots, ball 57% visible)
    ├─ src/v2.py              HistGradientBoosting  -> log P(H/A/D) per frame -> Viterbi (switch 10)
    ├─ src/seq.py             BiGRU (hidden 64, 30-s windows) over the same features -> Viterbi (switch 3)
    ├─ src/pathcrf_io.py      stitch 46 slots into 11 persistent tracks per team, cut alive episodes (≥10 s)
-   └─ src/pathcrf_run.py     PathCRF home/away on alive frames + our dead-ball frames -> final CSV
+   └─ src/pathcrf_run.py     PathCRF home/away on alive frames + the BiGRU's dead-ball frames -> final CSV
 ```
 Final label per frame = PathCRF team if the frame is alive and covered by an episode, else our
 model's label (H / A / D). `X` is never emitted on graded frames.
@@ -88,8 +88,9 @@ complete) but worse on held-out DFL degraded realistically (0.42 vs 0.44 spellF1
 | **HGB v3, realistic degradation (measured ball gaps + player dropout; the yardstick from here on)** | 0.44 / 0.83 | 0.44 / 0.81 |
 | BiGRU, frozen DFL dead ball, mild degradation | 0.60 / 0.91 | 0.47 / 0.67 |
 | BiGRU + dead-ball augmentation + 3-s minimum, mild degradation | 0.58 / 0.91 | 0.64 / 0.76 |
-| **BiGRU, realistic degradation** | 0.46 / 0.84 | TODO |
+| **BiGRU, realistic degradation** | 0.46 / 0.84 | 0.63 / 0.88 |
 | PathCRF authors' checkpoint + HGB (realistic) dead balls | – | 0.58 / 0.83 |
+| **PathCRF authors' checkpoint + BiGRU (realistic) dead balls (current candidate)** | – | 0.61 / 0.88 |
 | PathCRF authors' checkpoint + v2 dead balls | 0.69 / 0.95 (one match) | 0.62 / 0.72 |
 | PathCRF authors' checkpoint + augmented HGB dead balls | – | 0.62 / 0.85 |
 | **PathCRF ours, DFL only (7 folds)** | **TODO(gpu)** | TODO(gpu) |
@@ -111,7 +112,7 @@ complete) but worse on held-out DFL degraded realistically (0.42 vs 0.44 spellF1
 ```bash
 git clone <public repo>; cd <repo>; python3 -m venv .venv; .venv/bin/pip install -r requirements.txt
 # unpack the data bundle into data/ as in README.md
-.venv/bin/python src/v2.py --out evaluation/results/v2.csv     # dead balls (HGB, weights committed)
+.venv/bin/python src/seq.py                                      # dead balls (BiGRU, weights committed) -> evaluation/results/seq.csv
 bash pod/pathcrf_setup.sh                                        # PathCRF code+patch+venv, our weights (GitHub release), inference
 cp evaluation/results/pathcrf.csv submission/<team_name>.csv
 python evaluation/validate_submission.py submission/<team_name>.csv

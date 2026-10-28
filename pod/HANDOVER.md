@@ -27,21 +27,21 @@
 - Check progress: `ssh ... 'ls ~/pathcrf/saved/; grep -c "^Epoch" ~/pathcrf/saved/<trial>/log.txt; tail -2 ~/pathcrf/queue.log; nvidia-smi'`. A trial is finished when `~/pathcrf/saved/<trial>/model/state_dict_best_acc.pt` exists and its log says "Saved Model"; `queue.log` ends with "queue done" when all are done.
 - **Copy weights home** (do this for each finished trial; already done for 200 and 201): `scp -i ~/.ssh/vast -P 21901 -r root@ssh4.vast.ai:~/pathcrf/saved/<trial> ~/pathcrf/saved/` and the log `scp ... root@ssh4.vast.ai:~/pathcrf/fold*.log ~/mtah2027/pod/logs/`.
 - Score a fold on its held-out German match (fold k holds out the k-th of J03WMX J03WN1 J03WOH J03WOY J03WPY J03WQQ J03WR9): `cd ~/mtah2027 && ~/pathcrf/.venv/bin/python src/pathcrf_run.py --trial 20k --dfl <match>`.
-- Run the final model on BAR-ATH: `~/pathcrf/.venv/bin/python src/pathcrf_run.py --trial 400 --alive /Users/elijahcavan/mtah2027/evaluation/results/v3.csv` (absolute paths; writes `evaluation/results/pathcrf.csv` and prints the public-window sanity score).
+- Run the final model on BAR-ATH: `~/pathcrf/.venv/bin/python src/pathcrf_run.py --trial 400 --alive /Users/elijahcavan/mtah2027/evaluation/results/seq.csv` (absolute paths; writes `evaluation/results/pathcrf.csv` and prints the public-window sanity score).
 - Publish weights: `cd ~/pathcrf/saved && for t in 200 201 202 203 204 205 206 300 400; do tar czf /tmp/$t.tgz $t; done; gh auth switch -u ecavan; gh release create pathcrf-weights -R JustSomeGuysTM/more-than-a-hack-2027-solution /tmp/*.tgz --title "PathCRF weights" --notes "trained on DFL open data (+PFF WC22 for 300/400), see eda/NOTES.md"`.
 - If a stage crashed: `ssh ...`, look at `~/pathcrf/fold*.log` / `full.log`, then relaunch from that stage with `cd ~/pathcrf && nohup bash vast.sh folds k ... &` or `nohup bash vast.sh full &` (usage at the top of `~/mtah2027/pod/vast.sh`). If the box itself died: rent another 4090 with the disk slider at 50 GB, `bash pod/vast.sh pack` on the laptop, scp the tarball, `tar xzf`, `find ~ -name '._*' -delete`, `bash ~/mtah2027/pod/vast.sh setup`, relaunch.
 - **When everything is home and uploaded: destroy the instance on the vast.ai page (trash icon)** so it stops billing.
 - Only public data (DFL, PFF, PathCRF code) ever went to the box; BAR-ATH never leaves the laptop.
 
 ## The pipeline in one paragraph
-Per-frame models on the tactical tracking (HGB `src/v2.py`, BiGRU `src/seq.py`; trained on the 7 DFL open-data matches with the ball and players degraded to our tracker's measured quality) -> Viterbi decode into spells -> PathCRF (published possession-path model, player movement only) gives home/away on alive frames, our HGB gives the dead balls. Submission candidate file: `evaluation/results/pathcrf.csv` (PathCRF + HGB dead balls; public window 0.622 / 0.853). Everything tried and dropped (audio, commentary, broadcast ball, our own ball detector, PFF for the frame models) is in `eda/NOTES.md` and the tech doc.
+Per-frame models on the tactical tracking (HGB `src/v2.py`, BiGRU `src/seq.py`; trained on the 7 DFL open-data matches with the ball and players degraded to our tracker's measured quality) -> Viterbi decode into spells -> PathCRF (published possession-path model, player movement only) gives home/away on alive frames, our BiGRU gives the dead balls. Submission candidate file: `evaluation/results/pathcrf.csv` (PathCRF + BiGRU dead balls; public window 0.605 / 0.875, sanity only). Everything tried and dropped (audio, commentary, broadcast ball, our own ball detector, PFF for the frame models) is in `eda/NOTES.md` and the tech doc.
 
 ## Results so far (German leave-one-out, realistic degradation; public 5 min in brackets, sanity only)
-- HGB 0.438 / 0.828 (0.537 / 0.834). BiGRU: under the new degradation still running on the laptop (old yardstick 0.582 / 0.907; public 0.644 / 0.760).
+- HGB 0.438 / 0.828 (0.440 / 0.809). BiGRU 0.464 / 0.839 (0.625 / 0.879). PathCRF authors' ckpt + BiGRU dead balls (0.605 / 0.875).
 - PathCRF ours: fold 0 0.608 / 0.933, fold 1 0.579 / 0.905 (perfect dead balls, same matches: HGB 0.451 / 0.870 and 0.442 / 0.853). Authors' checkpoint on its own held-out match 0.727 / 0.949.
 
 ## What is left (after the GPU run)
-1. Folds 2-6, PFF ablation (300) and final (400) land -> fill the TODO(gpu) cells in `submission/TECH_DOC.md`, pick the final candidate (our PathCRF trial 400 + HGB dead balls, unless the folds say otherwise).
+1. Folds 2-6, PFF ablation (300) and final (400) land -> fill the TODO(gpu) cells in `submission/TECH_DOC.md`, pick the final candidate (our PathCRF trial 400 + BiGRU dead balls, unless the folds say otherwise).
 2. Upload weights as the release (command above); `bash pod/pathcrf_setup.sh` must then work from a clean clone on a laptop (no GPU needed; ~10 min + download).
 3. Clean-clone reproduction of the exact CSV, `python evaluation/validate_submission.py <file>`, rename to `<team_name>.csv` / `<team_name>.md`, make the repo public (or a public copy without data), submit the form. Lock by ~Nov 10.
 4. Review/merge PR #6 (Elijah decides when).
