@@ -56,7 +56,12 @@ Plus `src/possession.min_dead`: D runs < 3 s take the preceding label (T chosen 
 
 The DFL number drops because the augmented task is harder (and closer to ours); it is the honest one from now on. Public window:
 dead-frame F1 0.92 -> 0.95, D onsets still ~3 s late (the last open dead-ball issue), 3 short false stoppages remain.
-BiGRU CV with the augmentation is running (`eda/out/seq_cv_carry2.log`); `src/seq_model.pt` to be retrained after.
+BiGRU with the augmentation (DFL CV, held-out augmented): **0.582 / 0.907** at switch 3 (6: 0.579, 10: 0.576), vs HGB 0.532 / 0.893
+on the same setup; `src/seq_model.pt` retrained (2026-10-28). Public window (sanity): BiGRU alone 0.644 / 0.760, 19 spells,
+but its dead balls are weaker than the HGB's (758 D frames of 1469, onset +3.8 s, offset -2.1 s, dead-frame F1 0.925 vs 0.954),
+and as PathCRF's dead source it scores 0.545 / 0.763 vs 0.622 / 0.853 with the HGB. **HGB stays the dead-ball source**;
+the BiGRU is the standalone fallback candidate. Untested: BiGRU H/A emissions + HGB D emissions in one decode (needs the
+BiGRU fold log-probs cached in `seq.cv`, ~3 h).
 Old results kept: `evaluation/results/pathcrf_v2dead.csv` (PathCRF + v2 dead, 0.615 / 0.716).
 
 ### Ball detector re-test after the dead-ball fix (2026-10-27)

@@ -82,7 +82,8 @@ BAR–ATH's gap statistics (57% visible) and home/away are mirrored.
 | HGB v2 (38 features) | 0.50 / 0.89 | 0.52 / 0.70 |
 | HGB v3 (46 features), frozen DFL dead ball | 0.56 / 0.91 | 0.39 / 0.69 |
 | HGB v3 + dead-ball augmentation + 3-s minimum (DFL held-out also augmented) | 0.53 / 0.89 | 0.54 / 0.83 |
-| BiGRU | 0.60 / 0.91 | 0.47 / 0.67 |
+| BiGRU, frozen DFL dead ball | 0.60 / 0.91 | 0.47 / 0.67 |
+| BiGRU + dead-ball augmentation + 3-s minimum | 0.58 / 0.91 | 0.64 / 0.76 |
 | PathCRF authors' checkpoint + v2 dead balls | 0.69 / 0.95 (one match) | 0.62 / 0.72 |
 | PathCRF authors' checkpoint + augmented HGB dead balls | – | 0.62 / 0.85 |
 | **PathCRF ours, DFL only (7 folds)** | **TODO(gpu)** | TODO(gpu) |
