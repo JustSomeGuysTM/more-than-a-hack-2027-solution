@@ -35,9 +35,12 @@ Final label per frame = PathCRF team if the frame is alive and covered by an epi
 model's label (H / A / D). `X` is never emitted on graded frames.
 
 ## 3. Possession rules we implemented
-- **Dead ball (D)**: learned from DFL's `ballstatus` code (official alive/dead). In practice the
-  model fires on: ball off the pitch, ball missing for a long stretch, ball still and nobody near it,
-  players walking to set-piece positions (spread/speed drop). Restarts end D at the first touch.
+- **Dead ball (D)**: learned from DFL's `ballstatus` code (official alive/dead). DFL freezes the ball
+  while dead whereas the BAR–ATH tracker keeps reporting a moving ball during stoppages, so during
+  training the DFL dead ball is re-synthesised (carried by the nearest player or drifting) and the model
+  has to read stoppages from the players: walking speeds, spread, set-piece shapes, ball off the pitch.
+  Dead runs shorter than 3 s are folded into the surrounding possession (threshold from DFL CV).
+  Restarts end D at the first touch.
 - **Loose balls / challenges**: no explicit rule; possession stays with the last team in
   control until the decoder sees enough evidence of a controlled touch by the other team.
   The switch penalty (chosen by leave-one-match-out CV on DFL, never on this game) makes a change
@@ -77,16 +80,18 @@ BAR–ATH's gap statistics (57% visible) and home/away are mirrored.
 |---|---|---|
 | organisers' baseline_smooth50 | 0.12 / 0.44 | 0.33 / 0.62 |
 | HGB v2 (38 features) | 0.50 / 0.89 | 0.52 / 0.70 |
-| HGB v3 (46 features) | 0.56 / 0.91 | 0.39 / 0.69 |
+| HGB v3 (46 features), frozen DFL dead ball | 0.56 / 0.91 | 0.39 / 0.69 |
+| HGB v3 + dead-ball augmentation + 3-s minimum (DFL held-out also augmented) | 0.53 / 0.89 | 0.54 / 0.83 |
 | BiGRU | 0.60 / 0.91 | 0.47 / 0.67 |
 | PathCRF authors' checkpoint + v2 dead balls | 0.69 / 0.95 (one match) | 0.62 / 0.72 |
+| PathCRF authors' checkpoint + augmented HGB dead balls | – | 0.62 / 0.85 |
 | **PathCRF ours, DFL only (7 folds)** | **TODO(gpu)** | TODO(gpu) |
 | PathCRF ours, DFL + PFF (ablation fold) | TODO(gpu) | TODO(gpu) |
 | **submitted: trial 400 + v2 dead balls** | — | TODO(gpu) |
 
 ## 7. Limitations
-- Dead-ball detection is the weakest link: the ball is invisible on most dead frames and the
-  only cue is players' behaviour, so restarts are late by ~1 s and short stoppages are missed.
+- Dead-ball onsets are still ~3 s late: the tracker's ball keeps moving after the whistle and the
+  only cue is the players' behaviour. Restart ends are now within a frame or two.
 - PathCRF expects 11 identified players per team; our stitched tracks have ~10.8 per frame and
   identity switches inside a track are unavoidable.
 - Everything is calibrated on Bundesliga tempo; LaLiga differs.

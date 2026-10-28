@@ -24,12 +24,40 @@ Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and
    - Judge it on DFL leave-one-match-out with the degraded ball, not on the public window.
    Entry points: `src/ball_detect.py` (training), `src/ball_fuse.py` (fusion + support filter),
    `src/v2.py --source tactical_fused`, weights `src/ball_yolov8n.pt`, detections in the bucket `derived/ball_detections.npz`.
-2. **Dead-ball model** is the weakest link (restarts ~1 s late, short stoppages missed): try a dedicated
-   alive/dead BiGRU with longer windows, trained on DFL `ballstatus` only.
+2. **Dead-ball onsets** are still ~3 s late on our match after the carry fix (see "Dead-ball fix"): the restart end is now
+   right, the stoppage start is not. Ideas: ball speed-jump / ball-off-pitch features with longer memory, or a dedicated
+   alive/dead BiGRU with 60-s windows trained on augmented DFL.
 3. **Ensemble** the HGB and BiGRU log-probabilities before Viterbi (cheap, DFL CV decides).
 4. **Honest model selection**: degrade DFL *player* tracking to BAR-ATH quality (drop ~7% of observations,
    add slot/ID churn) so v2-vs-v3-vs-BiGRU can be chosen on DFL instead of the 5-min window.
 5. **PathCRF goalkeeper identity**: the model expects it; infer the keeper per team from position (deepest player).
+
+## Dead-ball fix: DFL freezes the ball, BAR-ATH does not (`eda/dead_diag.py`, 2026-10-27)
+Diagnostic on the 7 DFL folds (HGB v3): perfect dead frames would lift spellF1 only 0.557 -> 0.569, stoppage onsets/offsets
+are within ±0.4 s, 3 of 711 stoppages missed. So on DFL the dead ball is solved. On BAR-ATH's public window it is not:
+D starts 1.4-2 s late and ends 2-6 s early (545 D frames predicted of 1469; 2 of 4 stoppages missed by v2).
+Cause: in DFL the ball is **frozen while dead** (speed exactly 0 on 100% of dead frames, always seen, ~5 m from everyone);
+the BAR-ATH tracker keeps reporting a **moving** ball during stoppages (median 2.7 m/s, 35% within 1.5 m of a player who
+carries it to the restart, p75 6.5 m away; only 1% of dead frames have speed < 0.5 m/s). The models learned "still ball =
+dead", a cue our match never shows.
+Fix (`src/external.py: dead_ball_carry`, on by default in `src/v2.dfl_game`, so HGB and BiGRU both get it): per DFL dead run,
+60% attach the ball to the nearest player at the stoppage with a random-walk offset, 40% let it drift from where it stopped.
+Augmented DFL dead frames: speed p50 1.6 m/s, nearest player 3.0 m. A first version (always carried, fixed offset) fired on
+slow alive play (25 false stoppages in the public window) and is kept only as a note.
+Plus `src/possession.min_dead`: D runs < 3 s take the preceding label (T chosen on DFL CV: best or tied for every variant,
+2.7% of DFL stoppages are shorter). `switch_d` grid on DFL is flat (0.52-0.54), so the decoder penalty is not the lever.
+
+| | DFL CV (held-out also augmented) spellF1 / macroF1 | public 5 min (sanity) spellF1 / macroF1 / spells |
+|---|---|---|
+| HGB v3, frozen DFL ball (before) | 0.557 / 0.909 | 0.391 / 0.686 / 27 |
+| HGB v3 + carry + min_dead 3 s | 0.532 / 0.893 | **0.537 / 0.834 / 18** |
+| PathCRF ckpt + v2 dead (before) | – | 0.615 / 0.716 / 24 |
+| **PathCRF ckpt + new HGB dead** (`evaluation/results/pathcrf.csv`) | – | **0.622 / 0.853 / 28** |
+
+The DFL number drops because the augmented task is harder (and closer to ours); it is the honest one from now on. Public window:
+dead-frame F1 0.92 -> 0.95, D onsets still ~3 s late (the last open dead-ball issue), 3 short false stoppages remain.
+BiGRU CV with the augmentation is running (`eda/out/seq_cv_carry2.log`); `src/seq_model.pt` to be retrained after.
+Old results kept: `evaluation/results/pathcrf_v2dead.csv` (PathCRF + v2 dead, 0.615 / 0.716).
 
 ## The task in one line
 One LaLiga match (Barcelona vs Athletic, 2024-25 MD2). For each of the 199,319 frames of the

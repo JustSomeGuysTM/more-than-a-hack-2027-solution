@@ -12,16 +12,17 @@ import argparse, os, pickle, sys
 import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from src.features import features
-from src.possession import viterbi, score, LAB
-from src.external import degrade_ball
+from src.possession import viterbi, score, LAB, min_dead
+from src.external import degrade_ball, dead_ball_carry
 IDS = ["J03WMX", "J03WN1", "J03WOH", "J03WOY", "J03WPY", "J03WQQ", "J03WR9"]
 MODEL = os.path.join(ROOT, "src/v2_model.pkl")
+CARRY = os.environ.get("CARRY", "1") == "1"   # dead_ball_carry on DFL dead frames (eda/dead_diag.py, 2026-10-27)
 VISIBLE = 0.57   # ATD ball visibility on graded frames; 0.78 after ball_fuse.py (detector fills gaps)
 V = dict(temp=1.0, switch=10.0, switch_d=10.0)      # DFL leave-one-out: v2 spellF1 0.50 / macroF1 0.89; v3 (+since-touch features) 0.56 / 0.91 (2026-10-26). emissions are log-probs (~[-7, 0]); penalties are in the same units
 
 def dfl_game(mid, seed):
     z = np.load(os.path.join(ROOT, f"data_raw/external/dfl_{mid}.npz")); d = {q: z[q] for q in z.files}; d["fps"] = 25
-    return degrade_ball(d, visible=VISIBLE, seed=seed)
+    return degrade_ball(dead_ball_carry(d, seed) if CARRY else d, visible=VISIBLE, seed=seed)
 
 def mirror(X, names):
     """Swap home and away columns, negate the differences."""
@@ -44,7 +45,7 @@ def fit(X, y):
     return HistGradientBoostingClassifier(max_iter=300, learning_rate=0.1, max_leaf_nodes=31, random_state=0).fit(X, y)
 
 def decode(logp, v=V):
-    return LAB[viterbi(v["temp"] * logp, v["switch"], v["switch_d"])]
+    return min_dead(LAB[viterbi(v["temp"] * logp, v["switch"], v["switch_d"])])
 
 def cv():
     folds = []

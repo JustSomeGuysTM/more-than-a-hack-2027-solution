@@ -10,7 +10,7 @@ import argparse, os, sys
 import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from src.features import features
-from src.possession import viterbi, score, LAB
+from src.possession import viterbi, score, LAB, min_dead
 from src.v2 import IDS, dfl_game, mirror
 import torch, torch.nn as nn
 MODEL = os.path.join(ROOT, "src/seq_model.pt"); WIN = 750; HID = 64   # 30 s windows at 25 fps
@@ -52,7 +52,7 @@ def logp(net, X):
         out[s:s + WIN] += net(Xt[s:s + WIN][None].to(DEV))[0].cpu().numpy(); cnt[s:s + WIN] += 1
     return out / np.maximum(cnt, 1)[:, None]
 
-def decode(lp, s=S): return LAB[viterbi(s["temp"] * lp, s["switch"], s["switch_d"])]
+def decode(lp, s=S): return min_dead(LAB[viterbi(s["temp"] * lp, s["switch"], s["switch_d"])])
 
 def cv(epochs):
     folds = []

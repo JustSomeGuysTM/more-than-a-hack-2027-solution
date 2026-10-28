@@ -59,6 +59,20 @@ def dfl(match_id="J03WMX"):
     return {"players": players, "ball": ball, "team": np.array([0] * nh + [1] * na, np.int8), "labels": np.array(list("HAD"))[np.concatenate(LAB)],
             "fps": xy["firstHalf"]["Ball"].framerate, "period": np.concatenate(PER), "pitch": (pitch.length, pitch.width)}
 
+def dead_ball_carry(d, seed=0, sigma=2.0, step=0.05, p_carry=0.6):
+    """DFL freezes the ball while dead (speed 0 on 100% of dead frames, ~5 m from everyone); the BAR-ATH tracker keeps
+    reporting a moving ball during stoppages (median 2.7 m/s, 35% within 1.5 m of a player, p75 6.5 m away). Per dead run:
+    with p_carry attach the ball to the nearest player at the stoppage (random-walk offset), else let it drift from where
+    it stopped (random walk). Either way the model cannot learn 'still = dead' or 'glued to a walker = dead'."""
+    r = np.random.default_rng(seed); out = dict(d); b = d["ball"].copy(); pl = d["players"][:, :, :2]; dead = d["labels"] == "D"
+    edges = np.diff(np.r_[0, dead.astype(int), 0])
+    for s, e in zip(np.where(edges == 1)[0], np.where(edges == -1)[0]):
+        walk = r.normal(0, step, (e - s, 2)).cumsum(0)
+        dist = np.linalg.norm(pl[s] - b[s, :2], axis=1); dist = np.where(np.isfinite(dist), dist, np.inf)
+        if r.random() < p_carry and np.isfinite(dist).any(): b[s:e, :2] = pl[s:e, int(dist.argmin())] + r.normal(0, sigma, 2) + walk
+        else: b[s:e, :2] = b[s, :2] + walk
+    out["ball"] = b; return out
+
 def degrade_ball(d, visible=0.57, seed=0):
     """Hide the ball with BAR-ATH-like gaps (mean gap ~1 s, geometric) so a model trained here does
     not learn to trust a ball it will not see. ponytail: gap stats are a guess; fit to the ATD later."""
