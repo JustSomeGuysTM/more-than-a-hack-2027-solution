@@ -10,6 +10,27 @@ Writes `evaluation/results/pathcrf.csv` (PathCRF home/away on alive frames, dead
 public-window sanity score. `TRIAL=140` runs the authors' checkpoint (shipped in their repo) instead of our trial 400.
 Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and CV numbers are in the PathCRF section below.
 
+## TODO after the GPU run (for anyone on the team)
+1. **Ball detector, second attempt** (biggest open idea; all pieces exist). The first attempt filled ATD gaps
+   with YOLO detections and the dead class collapsed (see "Ball fusion result"). What to try instead:
+   - Retrain the detector with more data: SoccerNet Tracking 2023 (public, in the bucket under
+     `external/soccernet/SN-Tracking-2023/`) has ball boxes on broadcast frames; add them to the 2,269 ATD-projected tiles.
+     Target: >5 m errors under 5% at conf 0.5 (now 24-42%).
+   - Use detections as a *feature*, not a replacement: add "detector ball x/y/conf, frames since last detection"
+     columns to `src/features.py` and let the HGB/BiGRU learn how much to trust them, with DFL training frames
+     given synthetic detector noise (same error distribution as `eda/out/ball/detections.npz` vs ATD).
+   - Only fill inside alive episodes (from `src/pathcrf_io.py`), never in dead stretches, and require the
+     `ball_fuse.support()` 10/10 temporal consistency.
+   - Judge it on DFL leave-one-match-out with the degraded ball, not on the public window.
+   Entry points: `src/ball_detect.py` (training), `src/ball_fuse.py` (fusion + support filter),
+   `src/v2.py --source tactical_fused`, weights `src/ball_yolov8n.pt`, detections in the bucket `derived/ball_detections.npz`.
+2. **Dead-ball model** is the weakest link (restarts ~1 s late, short stoppages missed): try a dedicated
+   alive/dead BiGRU with longer windows, trained on DFL `ballstatus` only.
+3. **Ensemble** the HGB and BiGRU log-probabilities before Viterbi (cheap, DFL CV decides).
+4. **Honest model selection**: degrade DFL *player* tracking to BAR-ATH quality (drop ~7% of observations,
+   add slot/ID churn) so v2-vs-v3-vs-BiGRU can be chosen on DFL instead of the 5-min window.
+5. **PathCRF goalkeeper identity**: the model expects it; infer the keeper per team from position (deepest player).
+
 ## The task in one line
 One LaLiga match (Barcelona vs Athletic, 2024-25 MD2). For each of the 199,319 frames of the
 tactical video (25 fps) output `H` (Barça has ball), `A` (Athletic has ball), `D` (dead ball),
