@@ -36,10 +36,10 @@ folds)   # DFL leave-one-match-out; SOURCES="sportec" (trials 200+k) or "sportec
       --seq_dim 128 --crf_edge_dim 16 --emit_loss --src_loss --dst_loss --macro_weight 1 --crf_weight 1 --n_epochs ${N_EPOCHS:-30} --batch_size 64 \
       --start_lr 1e-3 --min_lr 1e-5 --weight_decay 1e-4 --num_workers 2 2>&1 | grep -v -i warn > fold${base}_$k.log
   done; echo "folds done" ;;
-full)    # final model: 6 DFL + 63 PFF train, 1 DFL + 1 PFF val -> saved/400
-  cd ~/pathcrf && python train.py --trial 400 --sources sportec pff --agent_model set_tf --seq_model sab \
+full)    # final model -> saved/$TRIAL (default 400: 6 DFL + 63 PFF train, 1 DFL + 1 PFF val). TRIAL=401 SOURCES=sportec BATCH=32 N_EPOCHS=50 = DFL-only with the authors' settings
+  cd ~/pathcrf && python train.py --trial ${TRIAL:-400} --sources ${SOURCES:-sportec pff} --agent_model set_tf --seq_model sab \
       --crf_model dynamic_sparse_crf --macro_type poss_edge --micro_type poss_edge --node_in_dim 8 --target_fps 5 --window_stride 1 --flip_pitch \
-      --seq_dim 128 --crf_edge_dim 16 --emit_loss --src_loss --dst_loss --macro_weight 1 --crf_weight 1 --n_epochs ${N_EPOCHS:-30} --batch_size 64 \
-      --start_lr 1e-3 --min_lr 1e-5 --weight_decay 1e-4 --num_workers 2 2>&1 | grep -v -i warn > full.log; echo "full done" ;;
+      --seq_dim 128 --crf_edge_dim 16 --emit_loss --src_loss --dst_loss --macro_weight 1 --crf_weight 1 --n_epochs ${N_EPOCHS:-30} --batch_size ${BATCH:-64} \
+      --start_lr 1e-3 --min_lr 1e-5 --weight_decay 1e-4 --num_workers 2 2>&1 | grep -v -i warn > full${TRIAL:-400}.log; echo "full ${TRIAL:-400} done" ;;
 *) echo "usage: vast.sh pack|setup|folds k...|full"; exit 1 ;;
 esac

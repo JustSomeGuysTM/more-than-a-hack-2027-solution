@@ -116,7 +116,17 @@ authors' 140 on the same match (in its training set) 0.717 / 0.939. HGB (realist
 | 2 | J03WOH | 0.691 / 0.940 | 0.485 / 0.869 |
 | 3 | J03WOY | 0.648 / 0.926 | 0.466 / 0.865 |
 | 4 | J03WPY | 0.673 / 0.933 | 0.469 / 0.865 |
-| mean 0-4 | | **0.640 / 0.927** | 0.463 / 0.864 |
+| 5 | J03WQQ | 0.673 / 0.938 | 0.528 / 0.874 |
+| 6 | J03WR9 | 0.655 / 0.943 (authors' 140, same held-out: 0.727 / 0.949) | 0.480 / 0.884 |
+| **mean, 7 folds** | | **0.647 / 0.931** | 0.474 / 0.868 |
+
+Run 1 complete 2026-10-29 07:40 UTC. Our 30-epoch / batch-64 folds trail the authors' 50-epoch / batch-32 fold by 0.07 on
+the one directly comparable match. Fold-6 model on BAR-ATH (sanity): 0.500 / 0.873, 31 spells -- fragments our match where
+the authors' checkpoint gives 26 (0.605 / 0.875). Both PFF stages crashed at start (`KeyError: 'away_None_x'`: 1,253 OTB
+rows across the 64 parquets carried a jerseyNum of None; fixed in place on the box and in `src/pff.py`). New queue
+(`~/pathcrf/queue2.sh`): **trial 401** = DFL-only final with the authors' settings (6 train + 1 val, batch 32, 50 epochs,
+~8 h) -> **trial 300** PFF ablation fold 0 (15 epochs, ~27 h) -> **trial 400** DFL+PFF final (15 epochs, ~27 h).
+Candidate weights: 401 unless the ablation says PFF helps.
 Incident: the queue stalled 1 h after fold 0 because two stale watcher shells whose command lines contained `train.py`
 kept `pgrep -f train.py` true; killed, folds 1-6 running. Fold logs: `pod/logs/`.
 

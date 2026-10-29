@@ -93,7 +93,7 @@ complete) but worse on held-out DFL degraded realistically (0.42 vs 0.44 spellF1
 | **PathCRF authors' checkpoint + BiGRU (realistic) dead balls (current candidate)** | – | 0.61 / 0.88 |
 | PathCRF authors' checkpoint + v2 dead balls | 0.69 / 0.95 (one match) | 0.62 / 0.72 |
 | PathCRF authors' checkpoint + augmented HGB dead balls | – | 0.62 / 0.85 |
-| **PathCRF ours, DFL only (7 folds)** | **TODO(gpu)** | TODO(gpu) |
+| **PathCRF ours, DFL only (7 folds, 30 epochs)** | **0.65 / 0.93** | 0.50 / 0.87 (fold-6 model) |
 | PathCRF ours, DFL + PFF (ablation fold) | TODO(gpu) | TODO(gpu) |
 | **submitted: trial 400 + v2 dead balls** | — | TODO(gpu) |
 
