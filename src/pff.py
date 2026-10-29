@@ -82,7 +82,8 @@ def pathcrf(gid):
     for p in np.unique(per): i = np.flatnonzero(per == p); ts[i] = (i - i[0]) / FPS
     own = pd.Series(np.where(lab == "H", "home", np.where(lab == "A", "away", None))).ffill().bfill().values
     df = pd.DataFrame({"frame_id": np.arange(F), "period_id": per, "timestamp": ts, "ball_state": np.where(alive, "alive", "dead"), "ball_owning_team_id": own,
-                       "player_id": np.where(alive & (d["otb_player"] != "") & ~np.char.endswith(d["otb_player"].astype(str), "_None"), d["otb_player"], None)   # OTB rows with jerseyNum None crashed PathCRF training (KeyError away_None_x), "ball_x": ball[:, 0], "ball_y": ball[:, 1], "ball_z": np.nan_to_num(d["ball"][:, 2])})
+                       # ponytail: OTB rows whose jerseyNum is None, or whose jersey never appears in the tracking columns, crashed PathCRF training (KeyError away_None_x / home_1_x); dropped here, and nulled in place on the box 2026-10-29
+                       "player_id": np.where(alive & (d["otb_player"] != "") & ~np.char.endswith(d["otb_player"].astype(str), "_None"), d["otb_player"], None), "ball_x": ball[:, 0], "ball_y": ball[:, 1], "ball_z": np.nan_to_num(d["ball"][:, 2])})
     ep = np.zeros(F, int); starts = np.flatnonzero(np.diff(np.r_[0, alive.astype(int)]) == 1)
     for k, s in enumerate(starts, 1):
         e = s + int(np.argmax(~alive[s:])) if (~alive[s:]).any() else F
