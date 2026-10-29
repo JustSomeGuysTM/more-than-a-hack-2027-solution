@@ -115,7 +115,8 @@ authors' 140 on the same match (in its training set) 0.717 / 0.939. HGB (realist
 | 1 | J03WN1 | 0.579 / 0.905 | 0.442 / 0.853 |
 | 2 | J03WOH | 0.691 / 0.940 | 0.485 / 0.869 |
 | 3 | J03WOY | 0.648 / 0.926 | 0.466 / 0.865 |
-| mean 0-3 | | **0.632 / 0.926** | 0.461 / 0.864 |
+| 4 | J03WPY | 0.673 / 0.933 | 0.469 / 0.865 |
+| mean 0-4 | | **0.640 / 0.927** | 0.463 / 0.864 |
 Incident: the queue stalled 1 h after fold 0 because two stale watcher shells whose command lines contained `train.py`
 kept `pgrep -f train.py` true; killed, folds 1-6 running. Fold logs: `pod/logs/`.
 
