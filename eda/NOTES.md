@@ -127,6 +127,12 @@ rows across the 64 parquets carried a jerseyNum of None; fixed in place on the b
 (`~/pathcrf/queue2.sh`): **trial 401** = DFL-only final with the authors' settings (6 train + 1 val, batch 32, 50 epochs,
 ~8 h) -> **trial 300** PFF ablation fold 0 (15 epochs, ~27 h) -> **trial 400** DFL+PFF final (15 epochs, ~27 h).
 Candidate weights: 401 unless the ablation says PFF helps.
+**Trial 401 done 2026-10-29 15:13 UTC** (DFL-only, authors' settings; training raised PathCRF's `logZ < gold` numerical
+check at epoch 47 of 50, the best-accuracy checkpoint from before that is what we use). On BAR-ATH with the BiGRU's dead
+balls (sanity): **0.660 / 0.884, 23 spells** -- best so far (authors' checkpoint 0.605 / 0.875, our fold-6 model 0.500 /
+0.873). `evaluation/results/pathcrf.csv` is now this; `pathcrf_run.py --trial` defaults to 401.
+Trial 300 crashed a second time at start (`KeyError: 'home_1_x'`: 290 OTB rows named jerseys that never appear in the
+tracking columns of their match; nulled in place on the box). `queue3.sh`: 300 (~27 h, ~Fri 23:00 UTC) -> 400 (~Sun 02:00 UTC).
 Incident: the queue stalled 1 h after fold 0 because two stale watcher shells whose command lines contained `train.py`
 kept `pgrep -f train.py` true; killed, folds 1-6 running. Fold logs: `pod/logs/`.
 
