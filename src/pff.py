@@ -77,13 +77,15 @@ def pathcrf(gid):
     import pandas as pd; from src.possession import fill_ball
     sys.path.insert(0, os.path.expanduser("~/pathcrf")); from datatools.utils import calculate_running_features
     d = pff(gid); F = len(d["ball"]); lab = d["labels"]; alive = lab != "D"; per = d["period"]
+    slot = {s: i for i, s in enumerate(d["slots"])}; si = np.array([slot.get(p, -1) for p in d["otb_player"]])
+    tracked = (si >= 0) & np.isfinite(d["players"][np.arange(F), si.clip(0), 0])   # PathCRF needs the OTB player tracked on that frame
     ball = pd.DataFrame(fill_ball(d["ball"][:, :2], 10 ** 9)).ffill().bfill().values
     ts = np.zeros(F)
     for p in np.unique(per): i = np.flatnonzero(per == p); ts[i] = (i - i[0]) / FPS
     own = pd.Series(np.where(lab == "H", "home", np.where(lab == "A", "away", None))).ffill().bfill().values
     df = pd.DataFrame({"frame_id": np.arange(F), "period_id": per, "timestamp": ts, "ball_state": np.where(alive, "alive", "dead"), "ball_owning_team_id": own,
                        # ponytail: OTB rows whose jerseyNum is None, or whose jersey never appears in the tracking columns, crashed PathCRF training (KeyError away_None_x / home_1_x); dropped here, and nulled in place on the box 2026-10-29
-                       "player_id": np.where(alive & (d["otb_player"] != "") & ~np.char.endswith(d["otb_player"].astype(str), "_None"), d["otb_player"], None), "ball_x": ball[:, 0], "ball_y": ball[:, 1], "ball_z": np.nan_to_num(d["ball"][:, 2])})
+                       "player_id": np.where(alive & (d["otb_player"] != "") & ~np.char.endswith(d["otb_player"].astype(str), "_None") & tracked, d["otb_player"], None), "ball_x": ball[:, 0], "ball_y": ball[:, 1], "ball_z": np.nan_to_num(d["ball"][:, 2])})
     ep = np.zeros(F, int); starts = np.flatnonzero(np.diff(np.r_[0, alive.astype(int)]) == 1)
     for k, s in enumerate(starts, 1):
         e = s + int(np.argmax(~alive[s:])) if (~alive[s:]).any() else F

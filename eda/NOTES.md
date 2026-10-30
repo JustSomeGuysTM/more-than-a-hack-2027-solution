@@ -133,6 +133,13 @@ balls (sanity): **0.660 / 0.884, 23 spells** -- best so far (authors' checkpoint
 0.873). `evaluation/results/pathcrf.csv` is now this; `pathcrf_run.py --trial` defaults to 401.
 Trial 300 crashed a second time at start (`KeyError: 'home_1_x'`: 290 OTB rows named jerseys that never appear in the
 tracking columns of their match; nulled in place on the box). `queue3.sh`: 300 (~27 h, ~Fri 23:00 UTC) -> 400 (~Sun 02:00 UTC).
+**Trial 300 done 2026-10-30 ~19:30 UTC** (PFF ablation: fold 0, 5 DFL + 62 PFF train, 15 epochs x 101 min). Held-out
+J03WMX: **0.639 / 0.940** vs DFL-only fold 0 (trial 200, 30 epochs) 0.608 / 0.933 -> PFF helps PathCRF (+0.03 on one
+match; note 300 also took ~5x the gradient steps). BAR-ATH sanity: 0.594 / 0.876, 18 spells (`pathcrf_300.csv`).
+(Correction: 300 was still in its 15th epoch at that check; the `home_13_x` KeyError in `full400.log` was the Oct 29
+crash.) Before 400 starts, a third data fix applied preemptively: PathCRF drops a player's columns inside an episode when
+they are all-NaN there, so an OTB id must be tracked on its own frame; 457 such rows nulled on the box and the rule added
+to `src/pff.py` (`tracked`). 400 starts automatically after 300 (~21:15 UTC), done ~Sun 2026-11-01 00:00 UTC.
 Incident: the queue stalled 1 h after fold 0 because two stale watcher shells whose command lines contained `train.py`
 kept `pgrep -f train.py` true; killed, folds 1-6 running. Fold logs: `pod/logs/`.
 
