@@ -45,6 +45,8 @@ Per-frame models on the tactical tracking (HGB `src/v2.py`, BiGRU `src/seq.py`; 
 2. ~~Upload weights as the release~~ done (all trials); `bash pod/pathcrf_setup.sh` must then work from a clean clone on a laptop (no GPU needed; ~10 min + download).
 3. Clean-clone reproduction of the exact CSV, `python evaluation/validate_submission.py <file>`, rename to `<team_name>.csv` / `<team_name>.md`, make the repo public (or a public copy without data), submit the form. Lock by ~Nov 10.
 4. Review/merge PR #6 (Elijah decides when).
+Planned (needs the box alive or re-rented, plus ~$25 credit): trial 402 = PathCRF on DFL + PFF at a longer setting (30 epochs, ~53 h): `cd ~/pathcrf && TRIAL=402 SOURCES="sportec pff" N_EPOCHS=30 nohup bash vast.sh full > full402.log 2>&1 &`, then score with `pathcrf_run.py --trial 402 --dfl J03WR9` and on BAR-ATH; adopt only if it beats 401 on both. Details in `eda/NOTES.md` TODO item 0.
+SoccerNet Tracking: train.zip (8.9 GB, the one with ball boxes) is in the bucket; test.zip / challenge2023.zip downloads were stalled and stopped on 2026-10-31, not needed for anything planned.
 Optional, in `eda/NOTES.md` "TODO after the GPU run": dedicated alive/dead model (stoppage onsets ~3 s late), ball detector second attempt (SoccerNet Tracking is in the bucket; `src/external.simulate_detector` judges it honestly).
 
 ## If the Claude session is gone

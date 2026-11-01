@@ -11,6 +11,13 @@ public-window sanity score. `TRIAL=140` runs the authors' checkpoint (shipped in
 Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and CV numbers are in the PathCRF section below.
 
 ## TODO after the GPU run (for anyone on the team)
+0. **PathCRF DFL + PFF at the long setting** (the one GPU experiment left; ~2 weeks of slack before Nov 17). The ablation
+   said PFF helps at equal training length, the 15-epoch DFL+PFF final (400) lost to the 50-epoch DFL-only one (401).
+   Run on the box (keep it alive or re-rent + `pod/vast.sh pack/setup`; the converter now applies all three PFF id fixes):
+   `cd ~/pathcrf && TRIAL=402 SOURCES="sportec pff" N_EPOCHS=30 nohup bash vast.sh full > full402.log 2>&1 &`
+   (batch 64, 30 epochs = 2x trial 400's steps, ~53 h, ~$25); or the authors' exact setting `BATCH=32 N_EPOCHS=50`
+   (~5 days, ~$55). Judge like 400/401: `pathcrf_run.py --trial 402 --dfl J03WR9` (val match) and the BAR-ATH public
+   window with the BiGRU dead balls; switch the candidate only if it beats 401 on both (0.707 / 0.954 and 0.660 / 0.884).
 1. **Ball detector, second attempt** (biggest open idea; all pieces exist). The first attempt filled ATD gaps
    with YOLO detections and the dead class collapsed (see "Ball fusion result"). What to try instead:
    - Retrain the detector with more data: SoccerNet Tracking 2023 (public, in the bucket under
