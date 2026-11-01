@@ -140,6 +140,18 @@ match; note 300 also took ~5x the gradient steps). BAR-ATH sanity: 0.594 / 0.876
 crash.) Before 400 starts, a third data fix applied preemptively: PathCRF drops a player's columns inside an episode when
 they are all-NaN there, so an OTB id must be tracked on its own frame; 457 such rows nulled on the box and the rule added
 to `src/pff.py` (`tracked`). 400 starts automatically after 300 (~21:15 UTC), done ~Sun 2026-11-01 00:00 UTC.
+**GPU run complete 2026-10-31 23:52 UTC** (~4.5 days, ~$42). Trial 400 (DFL + 63 PFF final, 15 epochs x 107 min):
+BAR-ATH sanity 0.556 / 0.855, 24 spells; DFL val match J03WR9 0.683 / 0.947 (293 spells, under-segments).
+Trial 401 (DFL-only, authors' settings, 50 epochs): 0.660 / 0.884 and 0.707 / 0.954 on the same two. **Decision: submit
+401.** PFF helped at equal short training (ablation) but the long DFL-only run wins on both checks; a DFL+PFF run at the
+authors' length would take ~4 days more and is not planned. All weights (200-206, 300, 400, 401) are on the laptop and in
+the GitHub release `pathcrf-weights`; `pod/logs/` has every training log. Box destroyed after this.
+
+| final models | DFL val J03WR9 (GT dead) | BAR-ATH public (BiGRU dead, sanity) |
+|---|---|---|
+| authors' checkpoint 140 (their LOMO fold, J03WR9 held out) | 0.727 / 0.949 | 0.605 / 0.875, 26 spells |
+| **ours 401, DFL only, 50 epochs** | **0.707 / 0.954** | **0.660 / 0.884, 23 spells** |
+| ours 400, DFL + PFF, 15 epochs | 0.683 / 0.947 | 0.556 / 0.855, 24 spells |
 Incident: the queue stalled 1 h after fold 0 because two stale watcher shells whose command lines contained `train.py`
 kept `pgrep -f train.py` true; killed, folds 1-6 running. Fold logs: `pod/logs/`.
 

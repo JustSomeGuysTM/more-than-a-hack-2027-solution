@@ -1,7 +1,6 @@
 # Ball possession for BAR–ATH — technical document (draft, team <team_name>)
 
-> Status 2026-10-27: draft. Numbers marked **TODO(gpu)** are filled in when the PathCRF training
-> run finishes (~2026-10-31). Final candidate choice and the submitted CSV follow from those numbers.
+> Status 2026-11-01: GPU run finished; all numbers final except the clean-clone reproduction check and file renaming.
 
 ## 1. Approach in one paragraph
 Two stages. (1) A per-frame model turns the tactical tracking (players, ball when visible) into
@@ -57,7 +56,7 @@ model's label (H / A / D). `X` is never emitted on graded frames.
 |---|---|---|---|---|
 | DFL / IDSSE open dataset | github.com/floodlight-sports (CC-BY 4.0) | DFL official per-frame `possession` and `ballstatus` codes (human-validated event feed) | 7 Bundesliga matches 2022/23, 25 Hz, ~2.0 M frames after home/away mirroring | training + leave-one-match-out CV of the HGB, BiGRU and PathCRF; choice of switch penalties |
 | Metrica Sports sample data | github.com/metrica-sports/sample-data | team possession derived by us from Metrica's human-coded events | games 1+2, ~0.3 M frames | held-out sanity check only (never trained on) |
-| PFF FC World Cup 2022 | PFF FC public release (free sign-up) | algorithmic labels written by us from PFF's human-coded on-ball events (rule in `src/pff.py`) | 64 matches, 25 fps resampled, ~10 M frames | PathCRF training only (DFL+PFF variant); **TODO(gpu)** kept or dropped per fold results. Also relabelled by a teacher model trained on DFL (`src/label_transfer.py`), tested for the frame models and dropped |
+| PFF FC World Cup 2022 | PFF FC public release (free sign-up) | algorithmic labels written by us from PFF's human-coded on-ball events (rule in `src/pff.py`) | 64 matches, 25 fps resampled, ~10 M frames | PathCRF training only: helped on the ablation fold (0.64 vs 0.61) but the DFL-only model trained longer won on both checks, so the submitted PathCRF uses DFL only; PFF-trained checkpoints are in the weights release. Also relabelled by a teacher model trained on DFL (`src/label_transfer.py`), tested for the frame models and dropped |
 | PathCRF authors' checkpoint `saved/140` | github.com/hyunsungkim-ds/pathcrf (KDD 2026) | trained by the authors on the same DFL open dataset (leave-one-out, held-out J03WR9) | — | reference only; the submitted model is our own retraining (trial 400) |
 | SoccerNet-Echoes + SoccerNet labels | github.com/SoccerNet | Whisper transcripts; SoccerNet human action labels | 330 matches | commentary stoppage model (dropped, see §5) |
 | BAR–ATH tactical ATD | provided | automatic | — | inference only; also the source of algorithmic ball-detector tiles (dropped, §5) |
@@ -95,7 +94,8 @@ complete) but worse on held-out DFL degraded realistically (0.42 vs 0.44 spellF1
 | PathCRF authors' checkpoint + augmented HGB dead balls | – | 0.62 / 0.85 |
 | **PathCRF ours, DFL only (7 folds, 30 epochs)** | **0.65 / 0.93** | 0.50 / 0.87 (fold-6 model) |
 | PathCRF ours, DFL + PFF (ablation fold 0, 15 epochs) | 0.64 / 0.94 (fold 0 DFL-only: 0.61 / 0.93) | 0.59 / 0.88 |
-| **submitted: our PathCRF trial 401 (DFL only, authors' settings) + BiGRU dead balls** | — | 0.66 / 0.88 |
+| PathCRF ours, DFL + PFF final (trial 400, 15 epochs) + BiGRU dead balls | 0.68 / 0.95 on its DFL validation match | 0.56 / 0.86 |
+| **submitted: our PathCRF trial 401 (DFL only, authors' settings, 50 epochs) + BiGRU dead balls** | 0.71 / 0.95 on its DFL validation match | **0.66 / 0.88** |
 
 ## 7. Limitations
 - Dead-ball onsets are still ~3 s late: the tracker's ball keeps moving after the whistle and the
