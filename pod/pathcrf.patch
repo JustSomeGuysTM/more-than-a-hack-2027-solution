@@ -1,0 +1,42 @@
+diff --git a/dataset.py b/dataset.py
+index 84c32f2..74af30d 100644
+--- a/dataset.py
++++ b/dataset.py
+@@ -181,7 +181,7 @@ class SoccerWindowDataset(Dataset):
+                     forbidden_mask = is_loop_prev & is_loop_next & edge_change
+                     if np.any(forbidden_mask):
+                         # Replace A->A followed by B->B with A->B to obey the CRF edge transition rule
+-                        poss_next[:-1] = np.where(forbidden_mask, poss_prev[1:], poss_next[:-1])
++                        poss_next = poss_next.copy(); poss_next[:-1] = np.where(forbidden_mask, poss_prev[1:], poss_next[:-1])
+ 
+                     ep_features_down = ep_features[down_idx]
+                     ep_poss_down = np.stack([poss_prev, poss_next, poss_team], axis=1)
+diff --git a/inference.py b/inference.py
+index 91d1d7a..f8b17f8 100644
+--- a/inference.py
++++ b/inference.py
+@@ -114,8 +114,8 @@ def _downsample_possession(
+         poss_series_down.append(last_poss)
+ 
+     poss_player = pd.Series(poss_series_down)
+-    poss_prev = poss_player.ffill().bfill().map(poss_dict).to_numpy()
+-    poss_next = poss_player.bfill().ffill().map(poss_dict).to_numpy()
++    poss_prev = poss_player.ffill().bfill().map(poss_dict).to_numpy().copy()
++    poss_next = poss_player.bfill().ffill().map(poss_dict).to_numpy().copy()
+ 
+     if poss_prev.size > 1:
+         is_loop_prev = poss_prev[:-1] == poss_next[:-1]
+diff --git a/train.py b/train.py
+index 9b04023..575e98e 100644
+--- a/train.py
++++ b/train.py
+@@ -459,7 +459,8 @@ if __name__ == "__main__":
+             json.dump(args_dict, f, indent=4)
+ 
+     SOURCE_CFG = {
+-        "sportec": {"fps": 25.0, "n_train": 5, "n_val": 1},
++        "sportec": {"fps": 25.0, "n_train": 6, "n_val": 1},   # mtah2027: all 7 DFL matches for the final model
++        "pff": {"fps": 25.0, "n_train": 63, "n_val": 1},     # mtah2027: PFF WC22 via src/pff.py --pathcrf
+         "kleague": {"fps": 10.0, "n_train": 10, "n_val": 2},
+         "tracab": {"fps": 25.0, "n_train": 1, "n_val": 0},
+     }

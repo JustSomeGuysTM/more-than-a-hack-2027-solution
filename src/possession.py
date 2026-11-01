@@ -59,6 +59,14 @@ def predict(d, pitch, alive_mask=None, p=P, setpiece=None):
     if alive_mask is None: alive_mask = np.ones(len(d["ball"]), bool)
     return LAB[viterbi(evidence(d, pitch, alive_mask, p, setpiece), p["switch"], p["switch_d"])]
 
+def min_dead(lab, T=3.0, fps=25):
+    """D runs shorter than T s take the label that precedes them: the possession continues through a blip.
+    T=3 chosen on DFL leave-one-out (eda/dead_diag.py, 2026-10-27): best or tied for every training variant; 2.7% of DFL stoppages are < 3 s."""
+    lab = lab.copy(); d = np.diff(np.r_[0, (lab == "D").astype(int), 0])
+    for s, e in zip(np.where(d == 1)[0], np.where(d == -1)[0]):
+        if (e - s) < T * fps and s > 0: lab[s:e] = lab[s - 1]
+    return lab
+
 def score(gt_labels, pred_labels):
     sys.path.insert(0, os.path.join(ROOT, "evaluation")); import possession_metrics as pm
     r = pm.evaluate(pm.label_codes(gt_labels), pm.label_codes(pred_labels))
