@@ -6,8 +6,8 @@ pip install -r requirements.txt            # this repo's .venv, data/ unpacked a
 gh auth login                              # needs access to the team repo (weights live in its GitHub release `pathcrf-weights`)
 bash pod/pathcrf_setup.sh                  # clones+patches PathCRF into ~/pathcrf, venv, weights, BAR-ATH parquet, inference
 ```
-Writes `evaluation/results/pathcrf.csv` (PathCRF home/away on alive frames, dead balls from our HGB) and prints the
-public-window sanity score. `TRIAL=140` runs the authors' checkpoint (shipped in their repo) instead of our trial 400.
+Writes `evaluation/results/pathcrf.csv` (PathCRF home/away on alive frames, dead balls from our BiGRU) and prints the
+public-window sanity score. `TRIAL=140` runs the authors' checkpoint (shipped in their repo) instead of our trial 401 (the submitted model).
 Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and CV numbers are in the PathCRF section below.
 
 ## TODO after the GPU run (for anyone on the team)
