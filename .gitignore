@@ -81,3 +81,7 @@ eda/out/
 eda/audio/
 eda/*.npz
 yolov8n.pt
+
+# Ball detector weights trained on BAR-ATH frames (src/ball_detect.py): derived from the match video, not
+# part of the submission pipeline. Kept in the bucket at derived/ball_yolov8n.pt, never in the public repo.
+src/ball_yolov8n.pt

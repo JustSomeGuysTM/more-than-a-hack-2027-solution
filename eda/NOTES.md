@@ -30,7 +30,7 @@ Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and
      `ball_fuse.support()` 10/10 temporal consistency.
    - Judge it on DFL leave-one-match-out with the degraded ball, not on the public window.
    Entry points: `src/ball_detect.py` (training), `src/ball_fuse.py` (fusion + support filter),
-   `src/v2.py --source tactical_fused`, weights `src/ball_yolov8n.pt`, detections in the bucket `derived/ball_detections.npz`.
+   `src/v2.py --source tactical_fused`, weights `src/ball_yolov8n.pt` (not in git: bucket `derived/ball_yolov8n.pt`), detections in the bucket `derived/ball_detections.npz`.
 2. **Dead-ball onsets** are still ~3 s late on our match after the carry fix (see "Dead-ball fix"): the restart end is now
    right, the stoppage start is not. Ideas: ball speed-jump / ball-off-pitch features with longer memory, or a dedicated
    alive/dead BiGRU with 60-s windows trained on augmented DFL.
@@ -504,7 +504,7 @@ check against the ATD (3,119 alive frames):
 
 At 0.25 the fused ball (`src/ball_fuse.py`: ATD first, detector otherwise) should take graded-frame
 visibility from 59% to ~78%. Inference over the whole match ≈ 2.5 h on the laptop (MPS), 4x2 tiles
-of 640 px per frame. Weights `src/ball_yolov8n.pt`; detections `eda/out/ball/detections.npz` and
+of 640 px per frame. Weights `src/ball_yolov8n.pt` (not in git since 2026-11-01: bucket `derived/ball_yolov8n.pt`); detections `eda/out/ball/detections.npz` and
 bucket `derived/ball_detections.npz`. Next: re-run v2 / PathCRF stitching on the fused ball and
 retrain v2 with DFL ball degraded to ~78% instead of 57%.
 
