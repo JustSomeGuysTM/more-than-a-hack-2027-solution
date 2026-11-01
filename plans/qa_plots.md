@@ -24,6 +24,23 @@ None of them show our predictions, and none work on DFL or PFF.
 
 DFL is where QA can be quantitative. BAR-ATH is a sanity check.
 
+## Status (2026-11-01)
+
+`eda/qa.py` implements steps 1-5; `src/pathcrf_run.py --dfl <match> --trial <t> --save` writes the PathCRF fold predictions
+it reads. Commands are in the `eda/qa.py` docstring. `python3 eda/qa.py selftest --render` checks the error typing and
+the oracles on synthetic labels and renders a synthetic clip; it passes. Nothing has been run on real data yet.
+
+What each command gives:
+- `dfl`: per-match spellF1/macroF1 for the full pipeline, BiGRU alone and PathCRF with GT dead balls, plus the three
+  oracle fixes (stoppage onsets on time, dead balls exact, team exact); error counts by type; `errors.csv`;
+  `timeline_<match>.png`.
+- `clips --type <type>`: the worst N events of a type as 2D clips (degraded ball as the BiGRU saw it, true ball as a
+  dotted ring where hidden), label strips for GT / ours / BiGRU / PathCRF.
+- `pff <gid>`: rule vs teacher dead fraction, possession counts, agreement, the dead/alive disagreements >= 2 s, a
+  timeline, optional clips.
+- `barath`: pipeline-bug checks on the submission CSV (label shares per half, X on graded frames, kick-off and
+  half-time), then a video of every label change (2 s before, 3 s after), optionally beside the tactical camera.
+
 ## Steps
 
 1. **Out-of-fold predictions on DFL** (small code). Add `--save` to `src/pathcrf_run.py --dfl` to write per-frame labels

@@ -31,7 +31,7 @@ def main(trial, alive_csv, out):
     w = slice(11185, 18685); print("agreement v2 vs pathcrf on alive frames in window: %.3f" % (lab[w][lab[w] != "D"] == pc[w][lab[w] != "D"]).mean())
     print("wrote", out)
 
-def score_external(trial, gid, dfl=False):
+def score_external(trial, gid, dfl=False, save=False):
     """PathCRF checkpoint on a PFF match (src/pff.py --pathcrf, algorithmic labels) or a DFL match (--dfl, official labels;
     PathCRF's own sportec parquet, rows aligned with data_raw/external/dfl_<id>.npz). Dead frames taken from the labels."""
     from src.pff import pff, PATHCRF; from src.possession import score
@@ -45,9 +45,15 @@ def score_external(trial, gid, dfl=False):
     for f, s in zip(fr, micro["edge_src"].values):
         f = pos[f]
         if isinstance(s, str) and L[f] != "D" and s[:4] in ("home", "away"): pc[f] = "H" if s[:4] == "home" else "A"
+    if save:   # raw PathCRF team per frame (H/A, N = no edge), whatever the label says; eda/qa.py builds the out-of-fold pipeline from it
+        team = np.full(len(L), "N", dtype="<U1")
+        for f, s in zip(fr, micro["edge_src"].values):
+            if isinstance(s, str) and s[:4] in ("home", "away"): team[pos[f]] = "H" if s[:4] == "home" else "A"
+        fn = os.path.join(ROOT, f"eda/out/qa/pathcrf_{trial}_{gid}.npy"); os.makedirs(os.path.dirname(fn), exist_ok=True); np.save(fn, team); print("wrote", fn)
     cov = np.mean([isinstance(s, str) and s[:4] in ("home", "away") for s in micro["edge_src"].values]); r = score(L, pc)
     print(f"PathCRF trial {trial} on {'DFL' if dfl else 'PFF'} {gid}: spellF1 {r['spell_f1_mean']:.3f} macroF1 {r['macro_f1']:.3f} spells {r['n_pred_spells']:.0f} (gt {r['n_gt_spells']:.0f}), frames with a team {cov:.2f}, alive frame acc {(pc[L != 'D'] == L[L != 'D']).mean():.3f}")
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--trial", type=int, default=401); ap.add_argument("--alive", default=os.path.join(ROOT, "evaluation/results/seq.csv")); ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/pathcrf.csv")); ap.add_argument("--pff", help="score the checkpoint on this PFF game id instead"); ap.add_argument("--dfl", help="score the checkpoint on this DFL match id (held-out fold) instead")
-    a = ap.parse_args(); score_external(a.trial, a.pff) if a.pff else score_external(a.trial, a.dfl, dfl=True) if a.dfl else main(a.trial, a.alive, a.out)
+    ap.add_argument("--save", action="store_true", help="with --dfl/--pff: also write the per-frame PathCRF team to eda/out/qa/ (eda/qa.py)")
+    a = ap.parse_args(); score_external(a.trial, a.pff, save=a.save) if a.pff else score_external(a.trial, a.dfl, dfl=True, save=a.save) if a.dfl else main(a.trial, a.alive, a.out)
