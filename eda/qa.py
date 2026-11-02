@@ -10,12 +10,14 @@ Everything is written to eda/out/qa/ (gitignored) and BAR-ATH renders never leav
     # PathCRF fold predictions first (PathCRF venv; fold k = trial 200+k holds out IDS[k]):
     for t in 200:J03WMX 201:J03WN1 202:J03WOH 203:J03WOY 204:J03WPY 205:J03WQQ 206:J03WR9; do
         ~/pathcrf/.venv/bin/python src/pathcrf_run.py --trial ${t%:*} --dfl ${t#*:} --save; done
+    # same with --oof: PathCRF episodes from the BiGRU's out-of-fold dead balls, as on BAR-ATH (the honest 'full' column)
     # BiGRU out-of-fold dead balls come from eda/out/seq_folds.npz (src/seq.py --cv)
     .venv/bin/python eda/qa.py dfl                                    # table, eda/out/qa/errors.csv, timeline_<match>.png
     .venv/bin/python eda/qa.py clips --type dead_onset_late --n 5     # 2D clips of the worst errors of one type
     .venv/bin/python eda/qa.py pff 10502 [--clips 5]                  # PFF rule labels vs teacher labels
     .venv/bin/python eda/qa.py barath --csv evaluation/results/pathcrf.csv [--video | --checks-only]   # sanity checks + spell-change video
     python3 eda/qa.py selftest                                        # synthetic checks, no data needed
+    bash eda/qa_batch.sh                                              # overnight: clips of every error type + PFF, uploaded to s3://.../qa/ (no BAR-ATH)
 """
 import argparse, csv, os, subprocess, sys
 import numpy as np
@@ -33,7 +35,7 @@ LAB = np.array(list("HAD"))
 COL = {"H": "#d62728", "A": "#1f77b4", "D": "#9e9e9e", "V": "#2e7d32"}           # anything else (X, N, '') is white
 TYPES = {"missed_stoppage": "#000000", "spurious_stoppage": "#7b1fa2", "dead_onset_late": "#ef6c00", "dead_onset_early": "#ffb74d",
          "restart_late": "#00838f", "restart_early": "#80deea", "missed_change": "#c2185b", "spurious_change": "#f48fb1",
-         "wrong_team_spell": "#fdd835"}
+         "wrong_team_spell": "#6d4c41"}   # brown: the yellow it had read as dead_onset_early
 
 
 # ---------------------------------------------------------------------------------------------- error typing (numpy only)
@@ -63,10 +65,11 @@ def classify(g, p, match=""):
     def add(t, s, e, size, detail=""):
         ev.append(dict(match=match, type=t, start=int(s), stop=int(e), seconds=round(size / FPS, 2), detail=detail))
     gd = [(s, e) for s, e, l in runs(g) if l == "D"]; pdd = [(s, e) for s, e, l in runs(p) if l == "D"]
-    for s, e in gd:                                                   # each real stoppage: found? onset / restart timing
+    for k, (s, e) in enumerate(gd):                                   # each real stoppage: found? onset / restart timing
         ov = [(a, b) for a, b in pdd if a < e and b > s]
         if not ov: add("missed_stoppage", s, e, e - s, f"{(e - s) / FPS:.1f}s stoppage"); continue
-        on, off = ov[0][0] - s, ov[-1][1] - e
+        prev_e = gd[k - 1][1] if k else 0; next_s = gd[k + 1][0] if k + 1 < len(gd) else len(g)
+        on = 0 if ov[0][0] < prev_e else ov[0][0] - s; off = min(ov[-1][1], next_s) - e   # one dead run spanning two stoppages: the live gap is the first one's late restart, counted once
         if on > LAG: add("dead_onset_late", s, ov[0][0], on, f"{on / FPS:+.1f}s")
         elif on < -LAG: add("dead_onset_early", ov[0][0], s, -on, f"{on / FPS:+.1f}s")
         if off > LAG: add("restart_late", e, ov[-1][1], off, f"{off / FPS:+.1f}s")
@@ -75,15 +78,17 @@ def classify(g, p, match=""):
         if not any(a < e and b > s for s, e in gd): add("spurious_stoppage", a, b, b - a)
     ha = ["H", "A"]
     for u in np.flatnonzero((g[1:] != g[:-1]) & np.isin(g[1:], ha) & np.isin(g[:-1], ha)) + 1:   # live changes of possession
-        if not switches_into(p, g[u], u - TOL, u + TOL + 1):
-            spell = run_length_from(g, u); hit = np.flatnonzero(p[u:u + spell] == g[u]); lag = int(hit[0]) if hit.size else spell
+        if p[u] in ha and p[u] != g[u] and not switches_into(p, g[u], u - TOL, u + TOL + 1):   # already right = an early switch; p == D here is a dead-ball error, typed above
+            spell = run_length_from(g, u); hit = np.flatnonzero(p[u:u + spell] != p[u]); lag = int(hit[0]) if hit.size else spell   # until we leave the wrong team
             add("missed_change", u, u + lag, lag, f"{g[u - 1]}->{g[u]}, ours {'never' if not hit.size else f'{lag / FPS:.1f}s late'}")
     for u in np.flatnonzero((p[1:] != p[:-1]) & np.isin(p[1:], ha) & np.isin(p[:-1], ha)) + 1:   # switching back to the right team is not a new error
-        if p[u] != g[u] and not switches_into(g, p[u], u - TOL, u + TOL + 1): add("spurious_change", u, u + run_length_from(p, u), run_length_from(p, u), f"{p[u - 1]}->{p[u]}")
+        if p[u] != g[u] and not switches_into(g, p[u], u - TOL, u + TOL + 1):
+            n = run_length_from(p, u); ok = np.flatnonzero((p[u:u + n] == g[u:u + n]) | (g[u:u + n] == "D")); w = int(ok[0]) if ok.size else n   # size = frames on the wrong team until GT agrees or goes dead (dead time is typed above)
+            add("spurious_change", u, u + w, w, f"{p[u - 1]}->{p[u]}, wrong {w / FPS:.1f}s of a {n / FPS:.1f}s run")
     for s, e, l in runs(g):                                           # whole possessions given to the wrong team
         if l in ha and e - s >= MIN_SPELL:
             seg = p[s:e]; alive = np.isin(seg, ha)
-            if alive.any() and (seg[alive] != l).mean() > 0.5: add("wrong_team_spell", s, e, e - s, f"gt {l}")
+            if alive.any() and (seg[alive] != l).mean() > 0.5: add("wrong_team_spell", s, e, int((seg[alive] != l).sum()), f"gt {l}, {(seg[alive] != l).sum() / FPS:.1f}s on the other team")   # size = wrong frames
     return ev
 
 def ffill_alive(p):
@@ -156,15 +161,15 @@ class Pitch:
         from starter.utils import draw_pitch, HOME_COLOUR, AWAY_COLOUR
         self.plt, self.names, self.strips = plt, list(strips), {k: np.asarray(v).astype(str) for k, v in strips.items()}
         self.cols = {k: rgb(v) for k, v in self.strips.items()}; self.half = 10 * FPS
-        self.fig = plt.figure(figsize=(9.6, 7.6), dpi=100); self.ax = self.fig.add_axes([0.03, 0.25, 0.94, 0.69]); draw_pitch(self.ax, *pitch)
-        self.sax = self.fig.add_axes([0.1, 0.04, 0.87, 0.17]); R = len(self.names)
+        self.fig = plt.figure(figsize=(9.6, 7.6), dpi=100); self.ax = self.fig.add_axes([0.03, 0.31, 0.94, 0.60]); draw_pitch(self.ax, *pitch)
+        self.sax = self.fig.add_axes([0.1, 0.07, 0.87, 0.16]); R = len(self.names)
         self.img = self.sax.imshow(np.ones((R, 2 * self.half, 3)), aspect="auto", interpolation="nearest", extent=[-10, 10, R - 0.5, -0.5])
         self.sax.axvline(0, color="k", lw=1.5); self.sax.set_yticks(range(R)); self.sax.set_yticklabels(self.names, fontsize=9)
         self.sax.set_xlabel("seconds from this frame", fontsize=8); self.sax.tick_params(labelsize=8)
         self.home = self.ax.scatter([], [], c=HOME_COLOUR, s=90, edgecolors="k", zorder=3); self.away = self.ax.scatter([], [], c=AWAY_COLOUR, s=90, edgecolors="k", zorder=3)
         self.ball = self.ax.scatter([], [], c="w", s=55, edgecolors="k", zorder=4)
         self.ghost = self.ax.scatter([], [], facecolors="none", edgecolors="k", linestyles=":", s=55, zorder=4)   # true ball where the model's ball is hidden (DFL)
-        self.txt = self.ax.text(0.01, 0.98, "", transform=self.ax.transAxes, va="top", fontsize=13, family="monospace", bbox=dict(fc="w", alpha=0.85))
+        self.txt = self.fig.text(0.03, 0.985, "", va="top", fontsize=13, family="monospace", bbox=dict(fc="w", alpha=0.85))   # above the pitch, not on it
 
     def frame(self, d, i, title, cam=None):
         p, t, b = d["players"][i], d["team"], d["ball"][i]; none = np.empty((0, 2))
@@ -191,6 +196,7 @@ def render(pitch, d, a0, a1, title, writer, step=1, cams=None):
         cam = next(cams, None) if cams is not None else None
         if cams is not None and cam is None: break
         writer.write(pitch.frame(d, i, title, cam))
+    for _ in cams or (): pass   # drain the camera reader so its ffmpeg exits cleanly instead of on a broken pipe
 
 
 # ---------------------------------------------------------------------------------------------- commands
@@ -207,16 +213,21 @@ def cmd_dfl(a):
         if os.path.exists(f): pc = np.load(f).astype(str); assert len(pc) == len(g), (mid, len(pc), len(g))
         else: pc = np.full(len(g), "N"); print(f"{mid}: {f} missing -> PathCRF columns empty (src/pathcrf_run.py --trial {a.base + k} --dfl {mid} --save)")
         cov = np.isin(pc, ["H", "A"])
-        full = bigru.copy(); m = cov & (bigru != "D"); full[m] = pc[m]        # the submission's rule: PathCRF team on frames our model calls alive
+        gtep = bigru.copy(); m = cov & (bigru != "D"); gtep[m] = pc[m]        # PathCRF run inside the official alive episodes (borrows true restarts)
+        fo = f.replace(".npy", "_oof.npy")                                    # PathCRF run inside the BiGRU's alive episodes, as on BAR-ATH (--oof)
+        if os.path.exists(fo): po = np.load(fo).astype(str); full = bigru.copy(); m = np.isin(po, ["H", "A"]) & (bigru != "D"); full[m] = po[m]
+        else: full = gtep; print(f"{mid}: {fo} missing -> 'full' uses official episodes (src/pathcrf_run.py --trial {a.base + k} --dfl {mid} --save --oof)")
         gtdead = g.copy(); m = cov & (g != "D"); gtdead[m] = pc[m]           # src/pathcrf_run.py --dfl: GT dead balls, GT team where PathCRF has no edge
-        np.savez(os.path.join(OUT, f"oof_{mid}.npz"), gt=g, full=full, gtdead=gtdead, bigru=bigru, pathcrf=pc)
+        np.savez(os.path.join(OUT, f"oof_{mid}.npz"), gt=g, full=full, full_gtep=gtep, gtdead=gtdead, bigru=bigru, pathcrf=pc, **({"pathcrf_oof": po} if os.path.exists(fo) else {}))
         r = {"match": mid, "coverage": cov[g != "D"].mean()}
-        for name, p in (("full", full), ("bigru", bigru), ("pathcrf_gtdead", gtdead)): r[name] = score(g, p)
+        for name, p in (("full", full), ("full_gtep", gtep), ("bigru", bigru), ("pathcrf_gtdead", gtdead)): r[name] = score(g, p)
         for o in ("onset", "dead", "team"): r["fix_" + o] = score(g, oracle(g, full, o))
         ev = classify(g, full, mid); allev += ev; table.append(r)
-        timeline(f"DFL {mid} (out of fold)", {"GT": g, "pipeline": full, "BiGRU": bigru, "PathCRF": pc}, ev, os.path.join(OUT, f"timeline_{mid}.png"))
-    cols = ("full", "bigru", "pathcrf_gtdead", "fix_onset", "fix_dead", "fix_team")
-    print("\nspellF1 / macroF1, out of fold. full = submission rule (BiGRU dead balls + PathCRF team); fix_* = full with one error source taken from GT")
+        rows = {"GT": g, "pipeline": full, "BiGRU": bigru, "PathCRF": pc}
+        if os.path.exists(fo): rows = {"GT": g, "pipeline": full, "BiGRU": bigru, "PathCRF (BiGRU ep)": po, "PathCRF (GT ep)": pc}
+        timeline(f"DFL {mid} (out of fold)", rows, ev, os.path.join(OUT, f"timeline_{mid}.png"))
+    cols = ("full", "full_gtep", "bigru", "pathcrf_gtdead", "fix_onset", "fix_dead", "fix_team")
+    print("\nspellF1 / macroF1, out of fold. full = submission rule (BiGRU dead balls + PathCRF team, PathCRF episodes from the BiGRU); full_gtep = same with PathCRF run in the official episodes; fix_* = full with one error source taken from GT")
     print(f"{'match':8s} {'cov':>5s} " + " ".join(f"{c:>14s}" for c in cols))
     for r in table: print(f"{r['match']:8s} {r['coverage']:5.2f} " + " ".join(f"{r[c]['spell_f1_mean']:6.3f}/{r[c]['macro_f1']:.3f}" for c in cols))
     print(f"{'mean':8s} {np.mean([r['coverage'] for r in table]):5.2f} " + " ".join(f"{np.mean([r[c]['spell_f1_mean'] for r in table]):6.3f}/{np.mean([r[c]['macro_f1'] for r in table]):.3f}" for c in cols))
@@ -227,7 +238,7 @@ def cmd_dfl(a):
     with open(os.path.join(OUT, "errors.csv"), "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=["match", "type", "start", "stop", "seconds", "detail"]); w.writeheader(); w.writerows(allev)
     print("wrote", os.path.join(OUT, "errors.csv"))
-    print("caveats: PathCRF ran on clean DFL tracking (BAR-ATH's is degraded), so 'full' is optimistic; pathcrf_gtdead also keeps GT team where PathCRF has no edge.")
+    print("caveats: PathCRF ran on clean DFL tracking (BAR-ATH's is degraded), so 'full' is optimistic; pathcrf_gtdead also keeps GT team where PathCRF has no edge; coverage is for the official-episode run.")
 
 def cmd_clips(a):
     from src.v2 import dfl_game           # seed 99 = the degraded held-out match the BiGRU folds saw
@@ -237,7 +248,7 @@ def cmd_clips(a):
         mid, s, t = e["match"], int(e["start"]), int(e["stop"])
         if mid not in cache:
             z = np.load(os.path.join(OUT, f"oof_{mid}.npz")); d = dfl_game(mid, 99)
-            cache[mid] = (d, Pitch(tuple(np.asarray(d.get("pitch", (105.0, 68.0)), float)), {"GT": z["gt"], "ours": z["full"], "BiGRU": z["bigru"], "PathCRF": z["pathcrf"]}))
+            cache[mid] = (d, Pitch(tuple(np.asarray(d.get("pitch", (105.0, 68.0)), float)), {"GT": z["gt"], "ours": z["full"], "BiGRU": z["bigru"], "PathCRF": z["pathcrf_oof"] if "pathcrf_oof" in z.files else z["pathcrf"]}))
         d, pitch = cache[mid]; a0 = max(0, s - 5 * FPS); a1 = min(len(d["ball"]), max(t, s + 2 * FPS) + 5 * FPS, a0 + a.max_seconds * FPS)
         w = Writer(os.path.join(OUT, "clips", f"{e['type']}_{mid}_{s}.mp4"), FPS / a.step)
         render(pitch, d, a0, a1, f"{mid} {e['type']} {e['detail']}", w, a.step); w.close()
@@ -328,6 +339,11 @@ def cmd_selftest(a):
     later = s("H" * 100 + "D" * 100 + "A" * 100 + "A" * 75 + "H" * 25)                  # 3 s late: missed, lag reported
     e = [x for x in classify(g, later) if x["type"] == "missed_change"]; assert e and e[0]["seconds"] == 3.0, classify(g, later)
     assert "".join(oracle(g, s("H" * 100 + "D" * 150 + "A" * 150), "dead")) == "H" * 100 + "D" * 100 + "H" * 50 + "A" * 150
+    two = s("H" * 100 + "D" * 50 + "A" * 100 + "D" * 50 + "H" * 100); merged = two.copy(); merged[100:300] = "D"   # one predicted dead run over two stoppages
+    t2 = [(x["type"], x["seconds"]) for x in classify(two, merged)]; assert t2 == [("restart_late", 4.0)], t2
+    e3 = s("H" * 100 + "D" * 100 + "A" * 100 + "H" * 100)
+    e3[300 - 75:300] = "H"; e3[200:225] = "A"                                          # switch to H 3 s before GT: wrong for 3 s, then right
+    sc = [x for x in classify(g, e3) if x["type"] == "spurious_change"]; assert sc and sc[0]["seconds"] == 3.0, classify(g, e3)
     print("classify / oracle: ok")
     if a.render:                                                       # synthetic match through the renderer and the timeline
         rng = np.random.default_rng(0); F = 600; pl = np.cumsum(rng.normal(0, 0.1, (F, 22, 3)), 0) + np.r_[rng.uniform(10, 95, (22, 1)), rng.uniform(5, 63, (22, 1)), np.zeros((22, 1))].reshape(3, 22).T

@@ -41,6 +41,82 @@ Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and
 6. ~~Label transfer for PFF~~ done, negative for the frame models (see "Label transfer"); open: feed the teacher labels into
    the PFF parquets for PathCRF training.
 
+## QA (DFL out of fold, PFF labels, BAR-ATH checks) (`eda/qa.py`, 2026-11-02)
+
+**DFL out of fold.** PathCRF folds 200-206 (`src/pathcrf_run.py --dfl --save`) reproduce the fold table above exactly
+(0.608 ... 0.655), and `eda/qa.py dfl`'s `pathcrf_gtdead` column equals them. BiGRU folds: `eda/out/seq_folds.npz`
+(2026-10-28, realistic degradation, rescored 0.464 / 0.839). New: `--oof` runs PathCRF inside the BiGRU's out-of-fold
+alive episodes, exactly as on BAR-ATH (the default `--dfl` run uses the official ball status for episodes, so PathCRF
+never sees an officially dead frame). That is the honest `full` column; it costs only 0.001 vs official episodes.
+
+| spellF1 / macroF1 (mean of 7) | |
+|---|---|
+| full pipeline (BiGRU dead balls + PathCRF team, BiGRU episodes) | **0.589 / 0.887** |
+| same, PathCRF in the official episodes | 0.590 / 0.890 |
+| BiGRU alone | 0.464 / 0.839 |
+| PathCRF with GT dead balls (fold table) | 0.647 / 0.931 |
+| full, stoppage onsets fixed from GT | 0.596 / 0.894 |
+| full, dead balls exactly right | 0.615 / 0.920 |
+| **full, team exactly right on alive frames** | **0.904 / 0.954** |
+
+PathCRF ran on clean DFL tracking, so 0.589 is optimistic for BAR-ATH's degraded tracking. **Where the score goes: the
+team call, not the dead balls.** Perfect dead balls add +0.026; perfect teams add +0.315.
+
+Error types (full pipeline, 7 matches; seconds = frames actually wrong; a dead-ball error is typed once, as a dead-ball
+error, never also as a team error):
+
+| type | count | seconds | median s |
+|---|---|---|---|
+| missed_change (GT changes team, we stay on the old team > 2 s) | 494 | 819 | 1.4 |
+| wrong_team_spell (> 50% of a >= 2 s GT possession on the other team) | 264 | 740 | 2.6 |
+| spurious_change (we change team, GT does not within 2 s) | 323 | 492 | 1.4 |
+| missed_stoppage | 54 | 339 | 4.8 |
+| dead_onset_early | 108 | 333 | 2.1 |
+| dead_onset_late | 66 | 269 | 2.5 |
+| spurious_stoppage | 24 | 260 | 7.8 |
+| restart_late | 70 | 256 | 2.3 |
+| restart_early | 65 | 246 | 2.0 |
+
+missed_change and wrong_team_spell overlap (a wrong spell starts with a missed change). Typing bugs fixed on the way:
+a predicted dead run spanning two real stoppages was counted twice (late restart + up to 134 s "early onset"); team
+errors used to swallow dead-ball frames; spurious changes and wrong spells were sized by the whole run, not the wrong
+frames. `eda/qa.py selftest` covers each case.
+
+What the clips show (`eda/qa.py clips --type <t> --n 5`, 2D pitch with the degraded ball the BiGRU saw):
+- **Short alive stretches get no PathCRF.** Episodes under PathCRF's 10-s window are skipped, so the pipeline falls back
+  on the BiGRU's team. That is 4% of alive frames, at 0.70 accuracy vs 0.91 where PathCRF runs, and 12% of all
+  wrong-team frames. Typical clip: 6 s of play between two stoppages, a turnover after a throw-in, the BiGRU keeps the
+  old team. Candidate fix (test on DFL CV with `--oof`): run PathCRF on short episodes padded to its window.
+- **Midfield duels, ball hidden:** PathCRF switches team 3-6 s before the real turnover (spurious_change), or after it.
+  88% of wrong-team frames are PathCRF's own; this is the model's ceiling on clean tracking.
+- **Attacks into the box:** the BiGRU calls the ball dead ~4 s early while play goes on (dead_onset_early).
+
+**PFF labels for trial 402 (`eda/qa.py pff`).** Teacher labels now go into the PathCRF parquets (`PFF_LABELS=teacher`,
+default; carriers on the other team than the label are nulled) and load through PathCRF's dataset with 401's settings.
+
+| | dead | stoppages | possessions | mean possession |
+|---|---|---|---|---|
+| PFF 10502 rule / teacher | 0.36 / 0.31 | 92 / 104 | 394 / 541 | 9.6 / 7.5 s |
+| PFF 10503 rule / teacher | 0.34 / 0.30 | 118 / 108 | 370 / 470 | 10.6 / 8.8 s |
+| PFF 3812 rule / teacher | 0.46 / 0.39 | 129 / 145 | 378 / 513 | 8.8 / 7.3 s |
+| DFL official, 7 matches | 0.41-0.52 | 92-113 | 370-511 | 5.5-9.2 s |
+
+Rule and teacher agree on 90-92% of frames and on the team on 95-97% of frames both call alive. The dead/alive
+disagreements >= 2 s (45-77 per game, 4-6 min) are mostly rule-dead / teacher-alive. In all 4 clips checked, the teacher
+was right: two throw-ins (ball back in play 3-5 s after going out; the rule waits 11-13 s for the next on-ball event),
+a ball over the byline into a corner (teacher dead, rule alive 15 s), and the last 19 s around the final whistle
+(teacher dead). Long stoppages agree. **Verdict: train 402 on the teacher labels.** Residual risk: the teacher's dead
+fraction is ~0.1 below DFL's official one, so it may still call some restarts too early.
+
+**BAR-ATH (`eda/qa.py barath`, submission = `pathcrf.csv`, byte-identical to `pathcrf_401.csv`).** Checks pass: no X on
+graded frames, kick-off and half-time mostly D. Half 1: H 0.35 A 0.22 D 0.43, 242 possessions, 64 stoppages; half 2: H
+0.31 A 0.22 D 0.47, 268 possessions, 70 stoppages (DFL range). 20-window change video: tracking overlays sit on the
+players, the broadcast clock matches frame/25, no flipped half. Graded half 2 opens ~2 min before its kick-off (walk-out,
+huddles; clock 45:06 at +125 s); the pipeline stays D until +117 s, which is right.
+
+Overnight renders of DFL/PFF clips (public data only, never BAR-ATH) go to `s3://more-than-a-hack-2027/qa/` via
+`eda/qa_batch.sh`.
+
 ## Dead-ball fix: DFL freezes the ball, BAR-ATH does not (`eda/dead_diag.py`, 2026-10-27)
 Diagnostic on the 7 DFL folds (HGB v3): perfect dead frames would lift spellF1 only 0.557 -> 0.569, stoppage onsets/offsets
 are within ±0.4 s, 3 of 711 stoppages missed. So on DFL the dead ball is solved. On BAR-ATH's public window it is not:

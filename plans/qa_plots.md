@@ -24,6 +24,13 @@ None of them show our predictions, and none work on DFL or PFF.
 
 DFL is where QA can be quantitative. BAR-ATH is a sanity check.
 
+## Status (2026-11-02)
+
+Steps 1-6 done; findings in `eda/NOTES.md`, section "QA (DFL out of fold, PFF labels, BAR-ATH checks)". Headline: the
+team call costs far more than dead balls (team oracle 0.589 -> 0.904, dead-ball oracle -> 0.615); teacher PFF labels
+look right in the clips; BAR-ATH checks pass. Clips for the team: `aws s3 sync s3://more-than-a-hack-2027/qa/ eda/out/qa/
+--profile mtah` (DFL and PFF only; regenerate with `bash eda/qa_batch.sh`). BAR-ATH videos stay local.
+
 ## Status (2026-11-01)
 
 `eda/qa.py` implements steps 1-5; `src/pathcrf_run.py --dfl <match> --trial <t> --save` writes the PathCRF fold predictions

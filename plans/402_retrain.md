@@ -1,5 +1,54 @@
 # Trial 402: PathCRF on DFL + PFF — Will
 
+## Quick start (steps 1-2 below are done; you start at step 3)
+
+Status 2026-11-02: the PFF parquets now use the teacher labels by default (`PFF_LABELS=teacher` in `src/pff.py`), and
+PathCRF's `train.py` repeats the DFL training matches `DFL_REPEAT` times (in `pod/pathcrf.patch`). Tested on the laptop:
+3 PFF games built both ways and loaded through PathCRF's own dataset class with trial 401's settings.
+
+| PFF game | rule: dead / episodes >= 10 s / carrier rows | teacher: dead / episodes / carrier rows |
+|---|---|---|
+| 10502 | 0.36 / 88 / 45,893 | 0.31 / 102 / 43,720 |
+| 10503 | 0.34 / 116 / 44,793 | 0.30 / 108 / 42,995 |
+| 10504 | 0.38 / 90 / 46,984 | 0.35 / 96 / 45,762 |
+
+Training windows over those 3 games: 45,537 rule, 49,454 teacher. Carrier rows drop 2-5% because a carrier whose team
+contradicts the teacher's label is now nulled.
+
+What you need: the vast.ai login (ask Eli), about $30-35 of credit, the SSH key `~/.ssh/vast` (or add your own public
+key on vast.ai under Keys), and a laptop that has `~/mtah2027` and `~/pathcrf` (Eli's, or set yours up with
+`bash pod/pathcrf_setup.sh` plus the data in the bucket).
+
+1. **Rent** a 1x RTX 4090 on https://cloud.vast.ai with the "PyTorch" template and the disk slider at 50 GB. The
+   Instances page shows the SSH command; note the port and host.
+2. **Ship the code and data** (from the laptop that has the PFF caches; only public data goes to the box):
+   ```
+   bash ~/mtah2027/pod/vast.sh pack
+   scp -i ~/.ssh/vast -P $PORT /tmp/pathcrf_box.tgz root@$HOST:~/
+   ssh -i ~/.ssh/vast -p $PORT root@$HOST 'tar xzf pathcrf_box.tgz && find ~ -name "._*" -delete && bash ~/mtah2027/pod/vast.sh setup'
+   ```
+   `setup` ends with the number of PFF parquets (64) and "setup done". Spot-check one line of its output: dead should
+   read 0.30-0.41.
+3. **Launch** (it survives you logging out):
+   ```
+   ssh -i ~/.ssh/vast -p $PORT root@$HOST 'cd ~/pathcrf && TRIAL=402 SOURCES="sportec pff" DFL_REPEAT=4 BATCH=64 N_EPOCHS=30 nohup bash vast.sh full > full402.log 2>&1 &'
+   ```
+4. **Check it** after ~2.5 h, when epoch 1 is done; recompute the cost from the epoch time before walking away:
+   ```
+   ssh -i ~/.ssh/vast -p $PORT root@$HOST 'grep -c "^Epoch" ~/pathcrf/saved/402/log.txt; tail -3 ~/pathcrf/full402.log; nvidia-smi | head -15'
+   ```
+5. **When it ends** (`saved/402/model/state_dict_best_acc.pt` exists and the log says "Saved Model"), copy it home,
+   then score and decide as in steps 5-6 below:
+   ```
+   scp -i ~/.ssh/vast -P $PORT -r root@$HOST:~/pathcrf/saved/402 ~/pathcrf/saved/
+   scp -i ~/.ssh/vast -P $PORT root@$HOST:~/pathcrf/full402.log ~/mtah2027/pod/logs/
+   ```
+   Then destroy the instance on the vast.ai page (trash icon) so it stops billing.
+
+Known box problems and fixes (all hit during trials 200-401) are in `pod/HANDOVER.md`: stale shells keeping
+`pgrep -f train.py` true, macOS `._*` files, and the `logZ < gold` check that can stop a run near the end (the best
+checkpoint saved before it is fine).
+
 ## Why 400 (DFL + PFF) lost to 401 (DFL only)
 
 `meeting.md` says the World Cup run got 15 passes and the German-only run got 50, so the comparison was not fair. An
@@ -40,7 +89,7 @@ The evidence is also weaker than it reads:
 
 ## Steps
 
-1. **Teacher labels into the PFF parquets** (`src/pff.py`, function `pathcrf`).
+1. ~~**Teacher labels into the PFF parquets**~~ done 2026-11-02 (see Quick start) (`src/pff.py`, function `pathcrf`).
    - Load `data_raw/external/pff_labels2_<gid>.npy` (H/A/D per frame). Assert its length equals `len(d["ball"])`: both
      should be on the 25-fps resampled frames, but verify.
    - Use it instead of `d["labels"]` for `lab`. That sets `ball_state`, `ball_owning_team_id` and the episode cuts.
@@ -51,11 +100,10 @@ The evidence is also weaker than it reads:
    - Behind a switch, `PFF_LABELS=rule|teacher` (default `teacher`), so 400's parquets stay reproducible.
    - Print per game: dead fraction (NOTES expects 0.30-0.41), number of episodes ≥ 10 s, rows with a carrier. Compare
      with the rule parquets.
-2. **DFL oversampling** in PathCRF's `train.py` (record the change in `pod/pathcrf.patch`). Where the training file list
+2. ~~**DFL oversampling**~~ done 2026-11-02 in PathCRF's `train.py` (record the change in `pod/pathcrf.patch`). Where the training file list
    is built from `SOURCE_CFG`, repeat the sportec training files `DFL_REPEAT` times (env var, default 1). Use 4.
 3. **Pack and launch** (vast.ai, 1x RTX 4090; box setup in `pod/HANDOVER.md`).
-   - `pod/vast.sh pack` ships only `pff_*.npz`. Add `data_raw/external/pff_labels2_*.npy`, and make sure `pff.py` on the
-     box reads them when `setup` rebuilds the parquets.
+   - `pod/vast.sh pack` now ships `pff_labels2_*.npy` too, and `setup` builds teacher-label parquets by default.
    - `cd ~/pathcrf && TRIAL=402 SOURCES="sportec pff" DFL_REPEAT=4 BATCH=64 N_EPOCHS=30 nohup bash vast.sh full > full402.log 2>&1 &`
    - Same split as 400/401 (6 DFL train, J03WR9 val; 63 PFF train, 1 PFF val), so 402 is judged exactly like 401.
    - Cost: 400 ran 107 min/epoch. With DFL x4 expect ~120-130 min, so 30 epochs ≈ 60-65 h ≈ $30. Check the first

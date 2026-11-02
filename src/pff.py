@@ -76,16 +76,20 @@ def pathcrf(gid):
     """25-fps npz -> PathCRF tracking_processed parquet (phase = episode = alive run >= 10 s, like src/pathcrf_io.py)."""
     import pandas as pd; from src.possession import fill_ball
     sys.path.insert(0, os.path.expanduser("~/pathcrf")); from datatools.utils import calculate_running_features
-    d = pff(gid); F = len(d["ball"]); lab = d["labels"]; alive = lab != "D"; per = d["period"]
+    d = pff(gid); F = len(d["ball"]); lab = d["labels"]; per = d["period"]
+    if os.environ.get("PFF_LABELS", "teacher") == "teacher":   # src/label_transfer.py labels in DFL's definition; PFF_LABELS=rule rebuilds trial 400's parquets
+        lab = np.load(f"{CACHE}/pff_labels2_{gid}.npy", allow_pickle=True).astype(str); assert len(lab) == F, (gid, len(lab), F)
+    alive = lab != "D"
     slot = {s: i for i, s in enumerate(d["slots"])}; si = np.array([slot.get(p, -1) for p in d["otb_player"]])
     tracked = (si >= 0) & np.isfinite(d["players"][np.arange(F), si.clip(0), 0])   # PathCRF needs the OTB player tracked on that frame
+    agree = np.char.startswith(d["otb_player"].astype(str), np.where(lab == "H", "home_", "away_"))   # carrier never contradicts the label (poss_team comes from the label, poss_prev/next from the carrier)
     ball = pd.DataFrame(fill_ball(d["ball"][:, :2], 10 ** 9)).ffill().bfill().values
     ts = np.zeros(F)
     for p in np.unique(per): i = np.flatnonzero(per == p); ts[i] = (i - i[0]) / FPS
     own = pd.Series(np.where(lab == "H", "home", np.where(lab == "A", "away", None))).ffill().bfill().values
     df = pd.DataFrame({"frame_id": np.arange(F), "period_id": per, "timestamp": ts, "ball_state": np.where(alive, "alive", "dead"), "ball_owning_team_id": own,
                        # ponytail: OTB rows whose jerseyNum is None, or whose jersey never appears in the tracking columns, crashed PathCRF training (KeyError away_None_x / home_1_x); dropped here, and nulled in place on the box 2026-10-29
-                       "player_id": np.where(alive & (d["otb_player"] != "") & ~np.char.endswith(d["otb_player"].astype(str), "_None") & tracked, d["otb_player"], None), "ball_x": ball[:, 0], "ball_y": ball[:, 1], "ball_z": np.nan_to_num(d["ball"][:, 2])})
+                       "player_id": np.where(alive & (d["otb_player"] != "") & ~np.char.endswith(d["otb_player"].astype(str), "_None") & tracked & agree, d["otb_player"], None), "ball_x": ball[:, 0], "ball_y": ball[:, 1], "ball_z": np.nan_to_num(d["ball"][:, 2])})
     ep = np.zeros(F, int); starts = np.flatnonzero(np.diff(np.r_[0, alive.astype(int)]) == 1)
     for k, s in enumerate(starts, 1):
         e = s + int(np.argmax(~alive[s:])) if (~alive[s:]).any() else F
@@ -97,7 +101,8 @@ def pathcrf(gid):
             i = per == p
             if np.isfinite(x[i]).sum() < FPS: x[i] = np.nan; y[i] = np.nan
         df[f"{name}_x"] = x; df[f"{name}_y"] = y
-    df = calculate_running_features(df); os.makedirs(PATHCRF, exist_ok=True); df.to_parquet(f"{PATHCRF}/{gid}.parquet"); return gid, df.shape, int(ep.max())
+    df = calculate_running_features(df); os.makedirs(PATHCRF, exist_ok=True); df.to_parquet(f"{PATHCRF}/{gid}.parquet")
+    return gid, df.shape, f"episodes>=10s {int(ep.max())}", f"dead {np.mean(~alive):.2f}", f"carrier rows {int(df.player_id.notna().sum())}"
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--npz", action="store_true"); ap.add_argument("--pathcrf", action="store_true"); ap.add_argument("--jobs", type=int, default=8); ap.add_argument("--games", nargs="*")
