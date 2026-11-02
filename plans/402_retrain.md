@@ -1,4 +1,6 @@
-# Trial 402: PathCRF on DFL + PFF — Will
+# Trial 402: PathCRF on DFL + PFF — William Ngana (Will)
+
+**Owner:** William Ngana (Will). Help: Elijah Cavan (Eli), for box access and the earlier runs.
 
 ## Quick start (steps 1-2 below are done; you start at step 3)
 

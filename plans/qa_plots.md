@@ -1,4 +1,6 @@
-# QA plots and videos — Eli
+# QA plots and videos — Elijah Cavan (Eli)
+
+**Owner:** Elijah Cavan (Eli).
 
 Goal: see where the score is lost, and check the submission is not doing anything silly. Watching is allowed; turning
 what we see on BAR-ATH into labels, corrections or frame-specific rules is not (RULES.md, rule 1). Everything rendered

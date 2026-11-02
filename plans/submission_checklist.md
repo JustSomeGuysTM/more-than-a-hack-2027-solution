@@ -1,4 +1,6 @@
-# Submission checklist — Brandon
+# Submission checklist — Brandon Hiles
+
+**Owner:** Brandon Hiles. Review: Elijah Cavan (Eli), who checks the clean clone before the form.
 
 1. **Final trial.** 401 unless Will's 402 passes its decision rule (`plans/402_retrain.md`). The default trial in
    `pod/pathcrf_setup.sh` and `src/pathcrf_run.py` must be the submitted one (setup was on 400; fixed in the

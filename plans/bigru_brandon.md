@@ -1,4 +1,6 @@
-# BiGRU (dead balls) — Brandon
+# BiGRU (dead balls) — Brandon Hiles
+
+**Owner:** Brandon Hiles.
 
 Second job after the submission checklist (`plans/submission_checklist.md` comes first: a file the repo cannot
 regenerate scores nothing). Model changes must be decided by **Nov 8** so the clean-clone reproduction can be redone.

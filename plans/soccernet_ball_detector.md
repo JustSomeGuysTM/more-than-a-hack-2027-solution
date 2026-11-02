@@ -1,4 +1,6 @@
-# SoccerNet ball detector — Gurashish, with Eli
+# SoccerNet ball detector — Gurashish Bagga, with Elijah Cavan (Eli)
+
+**Owner:** Gurashish Bagga. Help: Elijah Cavan (Eli), for the first detector and bucket access.
 
 ## What SoccerNet Tracking 2023 is, and why it cannot join the PathCRF / BiGRU training set
 

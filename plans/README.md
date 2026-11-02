@@ -5,11 +5,11 @@ clean-clone reproduction can be checked before the form.
 
 | task | owner | plan | can it move the Phase 1 score? |
 |---|---|---|---|
-| Trial 402: PathCRF on German (DFL) + World Cup (PFF) data | Will | [402_retrain.md](402_retrain.md) | yes, the only one that can |
-| SoccerNet ball detector | Gurashish, with Eli | [soccernet_ball_detector.md](soccernet_ball_detector.md) | only if its ceiling check says so; otherwise the innovation-round piece |
-| QA plots and videos | Eli | [qa_plots.md](qa_plots.md) | no, but it shows where the score is lost |
-| Submission and public repo | Brandon | [submission_checklist.md](submission_checklist.md) | protects it: a file the repo cannot regenerate is not a valid submission |
-| BiGRU dead-ball model (after the checklist) | Brandon | [bigru_brandon.md](bigru_brandon.md) | a little: QA puts the dead-ball ceiling at about +0.03 |
+| Trial 402: PathCRF on German (DFL) + World Cup (PFF) data | William Ngana (Will) | [402_retrain.md](402_retrain.md) | yes, the only one that can |
+| SoccerNet ball detector | Gurashish Bagga, with Elijah Cavan (Eli) | [soccernet_ball_detector.md](soccernet_ball_detector.md) | only if its ceiling check says so; otherwise the innovation-round piece |
+| QA plots and videos | Elijah Cavan (Eli) | [qa_plots.md](qa_plots.md) | no, but it shows where the score is lost |
+| Submission and public repo | Brandon Hiles | [submission_checklist.md](submission_checklist.md) | protects it: a file the repo cannot regenerate is not a valid submission |
+| BiGRU dead-ball model (after the checklist) | Brandon Hiles | [bigru_brandon.md](bigru_brandon.md) | a little: QA puts the dead-ball ceiling at about +0.03 |
 
 Two rules apply to everyone:
 - No hand labels or hand corrections on BAR-ATH, ever. Watching the video to debug is fine.
