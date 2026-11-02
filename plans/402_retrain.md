@@ -15,6 +15,10 @@ PathCRF's `train.py` repeats the DFL training matches `DFL_REPEAT` times (in `po
 Training windows over those 3 games: 45,537 rule, 49,454 teacher. Carrier rows drop 2-5% because a carrier whose team
 contradicts the teacher's label is now nulled.
 
+**Branch:** the teacher labels and `DFL_REPEAT` live on `submission-fixes` (PR #7). Pack from that branch, or from
+`main` once #7 is merged; packing from an older checkout silently trains on the old rule labels (check that `setup`
+prints dead 0.30-0.41).
+
 What you need: the vast.ai login (ask Eli), about $30-35 of credit, the SSH key `~/.ssh/vast` (or add your own public
 key on vast.ai under Keys), and a laptop that has `~/mtah2027` and `~/pathcrf` (Eli's, or set yours up with
 `bash pod/pathcrf_setup.sh` plus the data in the bucket).

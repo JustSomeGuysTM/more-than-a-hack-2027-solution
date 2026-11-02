@@ -9,6 +9,7 @@ clean-clone reproduction can be checked before the form.
 | SoccerNet ball detector | Gurashish, with Eli | [soccernet_ball_detector.md](soccernet_ball_detector.md) | only if its ceiling check says so; otherwise the innovation-round piece |
 | QA plots and videos | Eli | [qa_plots.md](qa_plots.md) | no, but it shows where the score is lost |
 | Submission and public repo | Brandon | [submission_checklist.md](submission_checklist.md) | protects it: a file the repo cannot regenerate is not a valid submission |
+| BiGRU dead-ball model (after the checklist) | Brandon | [bigru_brandon.md](bigru_brandon.md) | a little: QA puts the dead-ball ceiling at about +0.03 |
 
 Two rules apply to everyone:
 - No hand labels or hand corrections on BAR-ATH, ever. Watching the video to debug is fine.

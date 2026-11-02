@@ -66,6 +66,40 @@ small, this is the innovation-round piece: a clean, documented use of public hum
 6. **Rules.** SoccerNet: public, other games, human labels, allowed and documented. Nothing labelled by a person on our
    match. Weights trained on our match's frames stay in the bucket (`derived/`), never in the public repo.
 
+## Day one (a concrete start, ~half a day)
+
+1. `aws s3 cp s3://more-than-a-hack-2027/external/soccernet/SN-Tracking-2023/train.zip ~/sn/ --profile mtah`, unzip
+   outside the repo, open one clip: `gameinfo.ini` lists track ids and names; find the ball's id, draw its boxes from
+   `gt/gt.txt` on 20 frames with OpenCV and look at them. Confirms the format before anything else.
+2. Histogram of ball box sizes (px) over all clips, and the same on our tactical feed from `src/ball_detect.py
+   --extract` tiles. That one plot sizes the domain gap.
+3. **Zero-shot baseline in an hour:** stock COCO `yolov8n.pt`, class 32 ("sports ball"), on (a) 200 SoccerNet frames
+   with known boxes and (b) our every-50th-frame set from `src/ball_detect.py`, scored against the ATD ball exactly as
+   the NOTES table does (hit rate, median error, detections on ATD-missing frames). Every later model must beat it.
+4. Only then fine-tune (step 3 of the plan above).
+
+## Supplementary data (all about other games; check each licence before use and list it in the tech doc)
+
+| source | what | note |
+|---|---|---|
+| SoccerNet Tracking 2023 (in the bucket) | ball + player boxes, 25 fps broadcast clips | main source |
+| ISSIA-CNR Soccer dataset | 6 fixed wide cameras with ball annotations | closest to our wide tactical view; academic use |
+| Roboflow Universe "football players detection" sets | frames with a `ball` class | many are CC BY 4.0; quality varies |
+| SoccerNet Game State Reconstruction 2024 | broadcast clips with pitch-calibrated players | useful for the homography / 2D side, not the ball |
+
+## Where to run what
+
+- SoccerNet-only training can run anywhere (laptop MPS, Colab, the vast.ai box): public data, other games.
+- Anything that touches our match's frames (the ATD tiles, inference on BAR-ATH) stays on a teammate's laptop.
+- Weights trained with our match's tiles go to `s3://more-than-a-hack-2027/derived/`, never the public repo.
+
+## Ideas worth a slide even if Phase 1 does not use them
+
+- Ball tracking as a filter: Kalman + Viterbi over top-k candidates (step 4). Show a clip of raw detections vs the
+  tracked ball.
+- Possession from the ball: once a ball track exists, "nearest player to the tracked ball" is a possession signal
+  PathCRF does not have; that is the innovation-round story.
+
 ## Deliverables
 
 - A `--soccernet` mode in `src/ball_detect.py` (or a new script); weights in the bucket.

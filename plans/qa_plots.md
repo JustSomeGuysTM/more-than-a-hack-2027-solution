@@ -29,7 +29,11 @@ DFL is where QA can be quantitative. BAR-ATH is a sanity check.
 Steps 1-6 done; findings in `eda/NOTES.md`, section "QA (DFL out of fold, PFF labels, BAR-ATH checks)". Headline: the
 team call costs far more than dead balls (team oracle 0.589 -> 0.904, dead-ball oracle -> 0.615); teacher PFF labels
 look right in the clips; BAR-ATH checks pass. Clips for the team: `aws s3 sync s3://more-than-a-hack-2027/qa/ eda/out/qa/
---profile mtah` (DFL and PFF only; regenerate with `bash eda/qa_batch.sh`). BAR-ATH videos stay local.
+--profile mtah` (DFL and PFF only; regenerate with `bash eda/qa_batch.sh`). BAR-ATH videos stay local: everyone has the match data, so each person renders their own:
+`.venv/bin/python eda/qa.py barath --video` (tactical camera beside the 2D pitch, our labels and the public GT as strips,
+every predicted possession change; ~1 h for the whole match, `--max 20` for a 2-minute sample). DFL and PFF have no
+video, so their clips are the 2D pitch with the label strips. After a new model, rerun `eda/qa.py dfl` and
+`bash eda/qa_batch.sh` to refresh the bucket.
 
 ## Status (2026-11-01)
 
