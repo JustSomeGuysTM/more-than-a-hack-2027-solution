@@ -75,6 +75,9 @@ venv/
 env/
 .DS_Store
 
+# Public keys allowed to SSH into the pipeline container (docker/README.md); each person adds their own
+docker/authorized_keys
+
 # derived data -- never in the public repo
 data_raw/
 eda/out/

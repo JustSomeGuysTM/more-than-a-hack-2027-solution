@@ -1,0 +1,8 @@
+# The image only needs these; the repo itself is mounted at run time (docker-compose.yml).
+*
+!requirements.txt
+!requirements-starter.txt
+!requirements-model.txt
+!pod/pathcrf.patch
+!docker/
+docker/authorized_keys
