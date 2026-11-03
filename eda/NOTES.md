@@ -175,6 +175,31 @@ fills ~14% of hidden frames in runs of p50 4 / p90 14 frames, errors p50 0.8 m, 
 fused pipeline costs a 2.5-h detector pass for anyone reproducing the CSV. **Decision: the detector stays out of the
 submission pipeline**; the simulator stays so a better detector (SoccerNet-trained) can be judged the same way.
 
+### Ball-detector ceiling check (2026-11-03, plans/soccernet_ball_detector.md step 1)
+Same simulator with a better detector (`DET=fill,p_gross,sigma FILLS=1 TAG=_detN .venv/bin/python eda/dead_diag.py`), on the
+**current** degradation (real ATD gap structure + player dropout; the 2026-10-27 table above used the older, gentler one).
+HGB v3 leave-one-out, train and test with the same fills. "Pipeline" = that model's dead balls + PathCRF folds 200-206 for
+the team (official episodes, i.e. `full_gtep` in the QA table; the BiGRU row reproduces its 0.590).
+
+| detector (share of hidden frames filled, gross > 5 m, typical error) | HGB alone | pipeline | dead/alive acc |
+|---|---|---|---|
+| none (current) | 0.438 / 0.828 | 0.580 / 0.884 | 0.947 |
+| ours (`DET` unset: ~16%, 11%, 0.65 m) | 0.505 / 0.875 | 0.597 / 0.901 | 0.966 |
+| good (`DET=0.65,0.02,0.3`: ~50%, 2%, 0.3 m) | 0.563 / 0.900 | 0.610 / 0.910 | 0.977 |
+| great (`DET=1.5,0.02,0.3`: ~80%, 2%, 0.3 m) | 0.567 / 0.904 | 0.615 / 0.913 | 0.980 |
+| perfect (`DET=5,0,0`: 100%, 0, 0) | 0.604 / 0.914 | 0.627 / 0.920 | 0.987 |
+| BiGRU, no fills (submission) | | 0.590 / 0.890 | 0.953 |
+
+- A better ball is worth +0.02 (good) to +0.025 (great) on the pipeline over today's BiGRU, +0.037 at the ceiling. That clears
+  the plan's ~0.02 bar, just: SoccerNet training is worth doing for Phase 1, not only the innovation round.
+- Under the current degradation **even our existing detector helps** (+0.017 over the same HGB without fills, +0.007 over the
+  BiGRU). The "neutral, out of the pipeline" decision above was made on the old degradation. Not reopened here: the gain
+  is small, it costs the 2.5-h detector pass, and the BiGRU would need retraining with fills (`src/seq.py` reads `src.v2.FILLS`).
+- Caveats: simulated detector (errors independent of game state; a real one fails in crowds and at the far side, exactly
+  near stoppages); PathCRF in official episodes is optimistic; HGB, not the BiGRU, made the dead balls.
+- Leak to avoid: an earlier version left dead frames unfilled ("the detector is off when the ball is dead"); a still-missing
+  ball then means dead, and the scores jumped. Fills now land on dead frames too.
+
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with
 `src/pathcrf_run.py --trial 200 --dfl J03WMX` (GT dead frames substituted, PathCRF team on covered alive frames):

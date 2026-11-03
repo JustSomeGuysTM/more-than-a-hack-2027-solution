@@ -18,6 +18,7 @@ IDS = ["J03WMX", "J03WN1", "J03WOH", "J03WOY", "J03WPY", "J03WQQ", "J03WR9"]
 MODEL = os.path.join(ROOT, "src/v2_model.pkl")
 DEGRADE = os.environ.get("DEGRADE", "real")   # real (measured ATD gap structure + player dropout) | old (geometric 1-s ball gaps, full players)
 FILLS = os.environ.get("FILLS", "0") == "1"   # simulate_detector fills on the degraded DFL ball (fused-ball pipeline)
+DET = dict(zip(("fill", "p_gross", "sigma"), map(float, os.environ["DET"].split(",")))) if os.environ.get("DET") else {}   # e.g. DET=1.5,0.02,0.3 (~80% of hidden frames, 2% gross, 0.3 m): a better detector than ours
 CARRY = os.environ.get("CARRY", "1") == "1"   # dead_ball_carry on DFL dead frames (eda/dead_diag.py, 2026-10-27)
 VISIBLE = 0.57   # ATD ball visibility on graded frames; 0.78 after ball_fuse.py (detector fills gaps)
 V = dict(temp=1.0, switch=10.0, switch_d=10.0)      # DFL leave-one-out: v2 spellF1 0.50 / macroF1 0.89; v3 (+since-touch features) 0.56 / 0.91 (2026-10-26). emissions are log-probs (~[-7, 0]); penalties are in the same units
@@ -26,7 +27,7 @@ def dfl_game(mid, seed):
     z = np.load(os.path.join(ROOT, f"data_raw/external/dfl_{mid}.npz")); d = {q: z[q] for q in z.files}; d["fps"] = 25
     d = dead_ball_carry(d, seed) if CARRY else d
     d = degrade_ball_geom(d, seed=seed) if DEGRADE == "old" else degrade_players(degrade_ball(d, seed=seed), seed)
-    return simulate_detector(d, seed) if FILLS else d
+    return simulate_detector(d, seed, **DET) if FILLS else d
 
 def pff_game(gid, seed=0, labels="rule"):
     """PFF WC22 cache as a training game: same degradation as DFL; labels 'rule' (src/pff.py) or 'teacher' (src/label_transfer.py)."""

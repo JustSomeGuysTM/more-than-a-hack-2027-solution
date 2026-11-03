@@ -36,7 +36,8 @@ small, this is the innovation-round piece: a clean, documented use of public hum
 
 ## Steps
 
-1. **Ceiling check** (CPU, about an hour; do this first). Run the DFL leave-one-out with `FILLS=1`
+1. **Ceiling check — done 2026-11-03** (NOTES "Ball-detector ceiling check"): +0.02 (good detector) to +0.025 (80% fills)
+   on the DFL pipeline, +0.037 for a perfect ball. Worth doing for Phase 1; go to step 2. Original description: Run the DFL leave-one-out with `FILLS=1`
    (`eda/dead_diag.py`), but give `simulate_detector` the parameters of a good detector instead of ours: fill 50% and 80%
    of hidden-ball frames, 2% gross errors, no fills during dead stretches. Compare with the 0.532 / 0.893 baseline. If
    even the 80% case gains less than ~0.02, steps 3-5 are for the innovation round only.
