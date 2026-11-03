@@ -31,7 +31,7 @@ def main(trial, alive_csv, out):
     w = slice(11185, 18685); print("agreement v2 vs pathcrf on alive frames in window: %.3f" % (lab[w][lab[w] != "D"] == pc[w][lab[w] != "D"]).mean())
     print("wrote", out)
 
-def score_external(trial, gid, dfl=False):
+def score_external(trial, gid, dfl=False, save=False, oof=False):
     """PathCRF checkpoint on a PFF match (src/pff.py --pathcrf, algorithmic labels) or a DFL match (--dfl, official labels;
     PathCRF's own sportec parquet, rows aligned with data_raw/external/dfl_<id>.npz). Dead frames taken from the labels."""
     from src.pff import pff, PATHCRF; from src.possession import score
@@ -40,14 +40,29 @@ def score_external(trial, gid, dfl=False):
     if dfl: tr = pd.read_parquet(f"{PC}/data/sportec/tracking_processed/{gid}.parquet"); L = np.load(os.path.join(ROOT, f"data_raw/external/dfl_{gid}.npz"))["labels"].astype(object)
     else: tr = pd.read_parquet(f"{PATHCRF}/{gid}.parquet"); L = pff(gid)["labels"].astype(object)
     assert len(tr) == len(L), (len(tr), len(L)); pc = L.copy(); pos = {fid: i for i, fid in enumerate(tr["frame_id"].values)}
-    _, _, micro, _ = inference(model, tr, use_crf=args.get("crf_weight", 0) > 0, decode="indep", window_seconds=args.get("window_seconds"), correct_episode_lasts=False)
+    if oof:   # episodes from the BiGRU's out-of-fold dead balls (as on BAR-ATH) instead of the official ball status
+        from src.seq import decode; from src.v2 import IDS
+        z = np.load(os.path.join(ROOT, "eda/out/seq_folds.npz"), allow_pickle=True); al = decode(z["logp"][IDS.index(gid)]) != "D"
+        ep = np.zeros(len(al), int); starts = np.flatnonzero(np.diff(np.r_[0, al.astype(int)]) == 1)
+        for k, s0 in enumerate(starts, 1):
+            e = s0 + int(np.argmax(~al[s0:])) if (~al[s0:]).any() else len(al)
+            if e - s0 >= 10 * 25: ep[s0:e] = k              # PathCRF skips episodes shorter than its 10-s window (src/pathcrf_io.py)
+        tr = tr.copy(); tr["ball_state"] = np.where(al, "alive", "dead"); tr["episode_id"] = ep; tr["phase_id"] = ep
+    _, _, micro, _ = inference(model, tr, use_crf=args.get("crf_weight", 0) > 0, decode="indep", window_seconds=args.get("window_seconds"), correct_episode_lasts=False, evaluate=not oof)   # PathCRF's own stats need carriers in every episode; --oof episodes can sit in GT-dead time
     fr = micro.index.values if micro.index.name == "frame_id" else tr["frame_id"].values
     for f, s in zip(fr, micro["edge_src"].values):
         f = pos[f]
         if isinstance(s, str) and L[f] != "D" and s[:4] in ("home", "away"): pc[f] = "H" if s[:4] == "home" else "A"
+    if save:   # raw PathCRF team per frame (H/A, N = no edge), whatever the label says; eda/qa.py builds the out-of-fold pipeline from it
+        team = np.full(len(L), "N", dtype="<U1")
+        for f, s in zip(fr, micro["edge_src"].values):
+            if isinstance(s, str) and s[:4] in ("home", "away"): team[pos[f]] = "H" if s[:4] == "home" else "A"
+        fn = os.path.join(ROOT, f"eda/out/qa/pathcrf_{trial}_{gid}{'_oof' if oof else ''}.npy"); os.makedirs(os.path.dirname(fn), exist_ok=True); np.save(fn, team); print("wrote", fn)
     cov = np.mean([isinstance(s, str) and s[:4] in ("home", "away") for s in micro["edge_src"].values]); r = score(L, pc)
-    print(f"PathCRF trial {trial} on {'DFL' if dfl else 'PFF'} {gid}: spellF1 {r['spell_f1_mean']:.3f} macroF1 {r['macro_f1']:.3f} spells {r['n_pred_spells']:.0f} (gt {r['n_gt_spells']:.0f}), frames with a team {cov:.2f}, alive frame acc {(pc[L != 'D'] == L[L != 'D']).mean():.3f}")
+    print(f"PathCRF trial {trial} on {'DFL' if dfl else 'PFF'} {gid}: spellF1 {r['spell_f1_mean']:.3f} macroF1 {r['macro_f1']:.3f} spells {r['n_pred_spells']:.0f} (gt {r['n_gt_spells']:.0f}), frames with a team {cov:.2f}, alive frame acc {(pc[L != 'D'] == L[L != 'D']).mean():.3f}" + (" (--oof: GT team where PathCRF has no episode, not a pipeline score; see eda/qa.py dfl)" if oof else ""))
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--trial", type=int, default=401); ap.add_argument("--alive", default=os.path.join(ROOT, "evaluation/results/seq.csv")); ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/pathcrf.csv")); ap.add_argument("--pff", help="score the checkpoint on this PFF game id instead"); ap.add_argument("--dfl", help="score the checkpoint on this DFL match id (held-out fold) instead")
-    a = ap.parse_args(); score_external(a.trial, a.pff) if a.pff else score_external(a.trial, a.dfl, dfl=True) if a.dfl else main(a.trial, a.alive, a.out)
+    ap.add_argument("--save", action="store_true", help="with --dfl/--pff: also write the per-frame PathCRF team to eda/out/qa/ (eda/qa.py)")
+    ap.add_argument("--oof", action="store_true", help="with --dfl: episodes from the BiGRU out-of-fold dead balls, not the official ball status (eda/qa.py 'full')")
+    a = ap.parse_args(); score_external(a.trial, a.pff, save=a.save) if a.pff else score_external(a.trial, a.dfl, dfl=True, save=a.save, oof=a.oof) if a.dfl else main(a.trial, a.alive, a.out)

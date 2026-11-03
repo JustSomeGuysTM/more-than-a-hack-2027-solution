@@ -27,7 +27,7 @@ index 91d1d7a..f8b17f8 100644
      if poss_prev.size > 1:
          is_loop_prev = poss_prev[:-1] == poss_next[:-1]
 diff --git a/train.py b/train.py
-index 9b04023..575e98e 100644
+index 9b04023..6f363c8 100644
 --- a/train.py
 +++ b/train.py
 @@ -459,7 +459,8 @@ if __name__ == "__main__":
@@ -40,3 +40,11 @@ index 9b04023..575e98e 100644
          "kleague": {"fps": 10.0, "n_train": 10, "n_val": 2},
          "tracab": {"fps": 25.0, "n_train": 1, "n_val": 0},
      }
+@@ -495,6 +496,7 @@ if __name__ == "__main__":
+                 train_files = src_files[: cfg["n_train"]]
+                 val_files = src_files[cfg["n_train"] : cfg["n_train"] + cfg["n_val"]]
+ 
++            if src == "sportec": train_files = train_files * int(os.environ.get("DFL_REPEAT", "1"))   # mtah2027: oversample DFL next to PFF (trial 402 uses 4)
+             print("Generating datasets...")
+             dataset_args = {
+                 "node_in_dim": args.node_in_dim,

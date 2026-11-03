@@ -14,7 +14,7 @@ case "${1:-}" in
 pack)
   cd ~ && tar czf /tmp/pathcrf_box.tgz --exclude=pathcrf/.venv --exclude=pathcrf/data/sportec/tracking --exclude=pathcrf/data/sportec/event --exclude=pathcrf/data/sportec/metadata \
     --exclude=pathcrf/data/pff --exclude='pathcrf/saved/1*' --exclude='pathcrf/saved/2*' --exclude=pathcrf/__pycache__ \
-    pathcrf mtah2027/src mtah2027/pod/vast.sh mtah2027/data_raw/external/pff_*.npz
+    pathcrf mtah2027/src mtah2027/pod/vast.sh mtah2027/data_raw/external/pff_*.npz mtah2027/data_raw/external/pff_labels2_*.npy
   cp mtah2027/pod/vast.sh pathcrf/vast.sh 2>/dev/null || true; ls -la /tmp/pathcrf_box.tgz ;;
 setup)   # on the box; assumes a CUDA torch image (vast "pytorch" template)
   cd ~/pathcrf && cp ~/mtah2027/pod/vast.sh vast.sh
