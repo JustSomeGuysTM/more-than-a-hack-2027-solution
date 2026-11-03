@@ -1,0 +1,7 @@
+# What the container needs on top of requirements-model.txt and PathCRF's own requirements.txt (both installed by
+# docker/Dockerfile). torch is installed separately, from the CPU or CUDA wheel index. floodlight is not here: it needs
+# numpy 2 and gets its own Python in the image (docker/dfl-cache).
+pyarrow==17.0.0     # parquet for PathCRF: src/pathcrf_io.py, src/pff.py
+torch_geometric==2.6.1
+rdp==0.8            # PathCRF preprocessing
+tqdm

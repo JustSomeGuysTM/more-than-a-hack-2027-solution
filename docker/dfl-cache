@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Build the DFL training caches in the container: the same steps as pod/setup.sh, run with floodlight's own Python
+# (/opt/floodlight; floodlight needs numpy 2, the pipeline is pinned to numpy 1.26).
+#   dfl-cache              download the DFL open data once (2.4 GB, floodlight-data volume) -> data_raw/external/dfl_*.npz
+#   dfl-cache --pathcrf    also link the raw XML into ~/pathcrf/data/sportec and run PathCRF's preprocessing
+#                          (needed for src/pathcrf_run.py --dfl)
+set -euo pipefail
+FL=/opt/floodlight/bin/python
+cd /workspace
+$FL -c "from floodlight.io.datasets import IDSSEDataset; IDSSEDataset(dataset_dir_name='idsse', match_id='all')"
+mkdir -p data_raw/external
+PYTHONPATH=/workspace $FL - <<'PY'
+import numpy as np
+from src.external import dfl
+for m in ["J03WMX", "J03WN1", "J03WOH", "J03WOY", "J03WPY", "J03WQQ", "J03WR9"]:
+    d = dfl(m); np.savez_compressed(f"data_raw/external/dfl_{m}.npz", players=d["players"], ball=d["ball"], team=d["team"], labels=d["labels"], period=d["period"]); print(m, d["players"].shape)
+PY
+if [ "${1:-}" = "--pathcrf" ]; then
+  D=$($FL -c "from floodlight.settings import DATA_DIR; print(DATA_DIR)")/idsse
+  cd ~/pathcrf && mkdir -p data/sportec/metadata data/sportec/event data/sportec/tracking
+  ln -sf $D/DFL_02_01_matchinformation_*.xml data/sportec/metadata/; ln -sf $D/DFL_03_02_events_raw_*.xml data/sportec/event/
+  ln -sf $D/DFL_04_03_positions_raw_observed_*.xml data/sportec/tracking/
+  python datatools/preprocess.py
+fi
+echo "dfl-cache done"

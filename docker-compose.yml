@@ -1,0 +1,41 @@
+# The possession pipeline in a container you SSH into. Details in docker/README.md.
+#   cat ~/.ssh/id_ed25519.pub >> docker/authorized_keys
+#   docker compose up -d --build
+#   ssh -p 2222 dev@localhost
+services:
+  mtah:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    image: mtah2027-pipeline
+    container_name: mtah2027
+    hostname: mtah2027
+    init: true                  # reaps processes left by nohup / tmux jobs
+    restart: unless-stopped
+    shm_size: 2gb               # torch DataLoader workers
+    ports:
+      - "${SSH_BIND:-127.0.0.1}:${SSH_PORT:-2222}:22"   # local only by default; SSH_BIND=0.0.0.0 to reach it from other machines
+    volumes:
+      - .:/workspace                                    # the repo: code, data/, data_raw/, eda/out/, results
+      - /workspace/.venv                                # hides a host .venv; holds the python shim from the Dockerfile
+      - type: bind
+        source: ./docker/authorized_keys
+        target: /run/authorized_keys
+        read_only: true
+        bind:
+          create_host_path: false
+      - ssh-host-keys:/etc/ssh/host_keys
+      - pathcrf-saved:/home/dev/pathcrf/saved           # PathCRF checkpoints (ours from the release, plus the authors')
+      - pathcrf-data:/home/dev/pathcrf/data             # PathCRF preprocessed parquets
+      - floodlight-data:/data/floodlight                # DFL open data download (2.4 GB)
+      - gh-config:/home/dev/.config/gh                  # `gh auth login` survives restarts
+
+volumes:
+  ssh-host-keys:
+  pathcrf-saved:
+  pathcrf-data:
+  floodlight-data:
+  gh-config:
