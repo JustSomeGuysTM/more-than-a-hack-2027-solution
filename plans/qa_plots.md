@@ -4,7 +4,9 @@
 
 Goal: see where the score is lost, and check the submission is not doing anything silly. Watching is allowed; turning
 what we see on BAR-ATH into labels, corrections or frame-specific rules is not (RULES.md, rule 1). Everything rendered
-from BAR-ATH stays in `eda/out/` (gitignored) and is never uploaded anywhere.
+from BAR-ATH stays out of git (`eda/out/` is gitignored) and out of any hosted LLM. Exception decided by Eli on 2026-11-02:
+the QA video goes to the team's private bucket (`s3://more-than-a-hack-2027/qa_barath/`) so everyone can watch it; delete it before anything goes
+public (`aws s3 rm s3://more-than-a-hack-2027/qa_barath/ --recursive --profile mtah`).
 
 ## What exists
 
@@ -31,7 +33,7 @@ DFL is where QA can be quantitative. BAR-ATH is a sanity check.
 Steps 1-6 done; findings in `eda/NOTES.md`, section "QA (DFL out of fold, PFF labels, BAR-ATH checks)". Headline: the
 team call costs far more than dead balls (team oracle 0.589 -> 0.904, dead-ball oracle -> 0.615); teacher PFF labels
 look right in the clips; BAR-ATH checks pass. Clips for the team: `aws s3 sync s3://more-than-a-hack-2027/qa/ eda/out/qa/
---profile mtah` (DFL and PFF only; regenerate with `bash eda/qa_batch.sh`). BAR-ATH videos stay local: everyone has the match data, so each person renders their own:
+--profile mtah` (DFL and PFF only; regenerate with `bash eda/qa_batch.sh`). BAR-ATH: the full-match video is in the private bucket (`aws s3 cp s3://more-than-a-hack-2027/qa_barath/barath_changes.mp4 . --profile mtah`), or render your own:
 `.venv/bin/python eda/qa.py barath --video` (tactical camera beside the 2D pitch, our labels and the public GT as strips,
 every predicted possession change; ~1 h for the whole match, `--max 20` for a 2-minute sample). DFL and PFF have no
 video, so their clips are the 2D pitch with the label strips. After a new model, rerun `eda/qa.py dfl` and

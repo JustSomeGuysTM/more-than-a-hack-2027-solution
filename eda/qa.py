@@ -5,7 +5,7 @@ say where spellF1 is lost, per-match timelines and clips of the worst errors. Pl
 and a spell-change index video for BAR-ATH.
 
 Watching is fine; nothing here may turn into labels, corrections or frame-specific rules on BAR-ATH (RULES.md, rule 1).
-Everything is written to eda/out/qa/ (gitignored) and BAR-ATH renders never leave the laptop.
+Everything is written to eda/out/qa/ (gitignored) and BAR-ATH renders go only to git-free private storage (s3://more-than-a-hack-2027/qa_barath/, plans/qa_plots.md), never to a hosted LLM.
 
     # PathCRF fold predictions first (PathCRF venv; fold k = trial 200+k holds out IDS[k]):
     for t in 200:J03WMX 201:J03WN1 202:J03WOH 203:J03WOY 204:J03WPY 205:J03WQQ 206:J03WR9; do

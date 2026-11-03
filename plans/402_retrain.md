@@ -124,7 +124,16 @@ The evidence is also weaker than it reads:
    - adopt 402 if J03WR9 spellF1 ≥ 0.727 (401's 0.707 + 0.02) and macroF1 ≥ 0.949;
    - the public window can only veto: reject 402 if it is more than 0.05 below 0.660. Never adopt because of it;
    - otherwise 401 stays.
-7. **If adopted**: upload `402.tgz` to the `pathcrf-weights` release; set the default trial in `src/pathcrf_run.py` and
+7. **Refresh the QA videos for the new model** (whether or not it is adopted, so the team can compare; laptop, ~2 h):
+   ```
+   ~/pathcrf/.venv/bin/python src/pathcrf_run.py --trial 402 --alive $PWD/evaluation/results/seq.csv --out $PWD/evaluation/results/pathcrf_402.csv
+   .venv/bin/python eda/qa.py barath --csv evaluation/results/pathcrf_402.csv --checks-only        # pipeline-bug checks
+   .venv/bin/python eda/qa.py barath --csv evaluation/results/pathcrf_402.csv --video              # ~1 h, camera + 2D + labels
+   aws s3 cp eda/out/qa/barath_changes.mp4 s3://more-than-a-hack-2027/qa_barath/barath_changes_402.mp4 --profile mtah
+   ```
+   The DFL clips (`eda/qa.py dfl`, `bash eda/qa_batch.sh`) come from the leave-one-out folds 200-206, not from 402, so
+   they only change if new folds are trained. If 402 is adopted, also replace `s3://more-than-a-hack-2027/qa_barath/barath_changes.mp4`.
+8. **If adopted**: upload `402.tgz` to the `pathcrf-weights` release; set the default trial in `src/pathcrf_run.py` and
    `pod/pathcrf_setup.sh` to 402; update TECH_DOC §4 and §6; tell Brandon. Destroy the box either way.
 
 ## If there is budget for a second run

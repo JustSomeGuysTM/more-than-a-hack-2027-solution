@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Overnight QA renders on public data (DFL folds, PFF), uploaded for the team. BAR-ATH renders are never uploaded:
+# Overnight QA renders on public data (DFL folds, PFF), uploaded for the team. BAR-ATH renders are not part of this sync (they go to qa_barath/, see plans/qa_plots.md):
 # the sync below includes only clips/<error type>_*, clips/pff_*, timeline_*.png, pff_*.png and errors.csv.
 #   bash eda/qa_batch.sh            # after `eda/qa.py dfl`; ~1-2 h on a laptop
 #   aws s3 sync s3://more-than-a-hack-2027/qa/ eda/out/qa/ --profile mtah    # teammates: pull the clips
