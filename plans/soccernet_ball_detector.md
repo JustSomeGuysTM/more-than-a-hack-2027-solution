@@ -41,7 +41,9 @@ small, this is the innovation-round piece: a clean, documented use of public hum
    (`eda/dead_diag.py`), but give `simulate_detector` the parameters of a good detector instead of ours: fill 50% and 80%
    of hidden-ball frames, 2% gross errors, no fills during dead stretches. Compare with the 0.532 / 0.893 baseline. If
    even the 80% case gains less than ~0.02, steps 3-5 are for the innovation round only.
-2. **Data** (laptop).
+2. **Data** (laptop). **Day one done 2026-11-03** (NOTES "SoccerNet ball data, day one", `src/soccernet.py`): format
+   confirmed, ball is ~3.3x smaller on our feed, zero-shot COCO recall 0.58 native / 0.18 at our size / 0.53 when upsampled
+   x2.2. Next: our existing detector on 2x upsampled tiles vs the ATD, then fine-tune with shrink-and-upsample.
    - `aws s3 cp s3://more-than-a-hack-2027/external/soccernet/SN-Tracking-2023/train.zip . --profile mtah`; unzip
      outside the repo.
    - Pull the ball boxes per clip from `gt.txt`, using the `gameinfo.ini` id of the ball. Count frames with a ball box

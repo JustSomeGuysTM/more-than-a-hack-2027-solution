@@ -200,6 +200,25 @@ the team (official episodes, i.e. `full_gtep` in the QA table; the BiGRU row rep
 - Leak to avoid: an earlier version left dead frames unfilled ("the detector is off when the ball is dead"); a still-missing
   ball then means dead, and the scores jumped. Fills now land on dead frames too.
 
+### SoccerNet ball data, day one (2026-11-03, `src/soccernet.py`)
+- Format confirmed: MOT `gt/gt.txt` (frame, track, x, y, w, h, ...), ball track named `ball;1` in `gameinfo.ini`. Train
+  split: 57 clips x 750 frames, 40,931 ball boxes, ball labelled on 94% of frames (clip p10 81%).
+- **Domain gap:** SoccerNet ball box sqrt(w*h) p5/50/95 = 8 / 14 / 23 px (zoomed broadcast). Ours on the tactical feed,
+  0.22 m through the homography at our detector's confident hits: 3 / 4.2 / 7 px. A ~3.3x scale difference.
+- **Zero-shot baseline** (stock COCO `yolov8n.pt`, class 32, top-1 per frame, 5 clips x 50 frames, hit = within max(8 px, box)):
+
+| frames | recall | wrong or no-ball top-1 |
+|---|---|---|
+| SoccerNet as is | 0.58 | 44% |
+| shrunk to our ball size (x0.3) | 0.18 | 10% |
+| shrunk x0.3, then upsampled x2.2 by YOLO | 0.53 | 33% |
+
+- The ball survives the shrink; the network's stride loses it. So: **run our detector on upsampled tiles** (2-3x; about
+  6x the tiles, so a few hours for the full match on MPS) and train on SoccerNet frames shrunk to our size then upsampled
+  the same way. Upsampling is cheap to test with our existing weights first.
+- Caveat: a shrunk broadcast frame is sharper than our wide camera (different lens, compression, motion blur); the real
+  test is on our feed against the ATD.
+
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with
 `src/pathcrf_run.py --trial 200 --dfl J03WMX` (GT dead frames substituted, PathCRF team on covered alive frames):
