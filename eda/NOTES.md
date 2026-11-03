@@ -219,6 +219,29 @@ the team (official episodes, i.e. `full_gtep` in the QA table; the BiGRU row rep
 - Caveat: a shrunk broadcast frame is sharper than our wide camera (different lens, compression, motion blur); the real
   test is on our feed against the ATD.
 
+### Upsampled tiles on our feed: negative (2026-11-03)
+`src/ball_detect.py --infer --up 2` (frame upsampled 2x, 8x4 tiles of 640 instead of 4x2), every 5th frame of BAR-ATH
+(2 h 20 min on MPS); stock COCO yolov8n at x1 and x2 on every 50th frame. Scored with `--check <file> --step 50` against the
+ATD ball (3,987 frames with a homography, ATD ball on 57%; includes warm-up and stoppages, so absolute numbers are worse
+than the 2026-10-27 table, which used alive frames only):
+
+| top-1 detector, conf 0.25 | detects on ATD-ball frames | median error vs ATD | > 5 m off | detects on ATD-missing frames |
+|---|---|---|---|---|
+| ours, native (`detections.npz`) | 89% | 1.3 m | 28% | 38% |
+| ours, x2 | 99% | 16.5 m | 69% | 95% |
+| COCO, native | 68% | 13.0 m | 58% | 42% |
+| COCO, x2 | 93% | 14.5 m | 59% | 77% |
+
+- Upsampling **hurts** our detector. Pixel positions map back correctly (identical to native where both find the ball);
+  with 4x the tiles, the top-1 box is more often a confident false positive: a player's head, a line, a spare ball in
+  the warm-up. The model was trained on native tiles (ball ~4 px) and never saw an 8 px ball or that many negatives.
+- Stock COCO is not a usable baseline on our feed at either scale (median error 13-15 m). The SoccerNet result (shrink then
+  upsample recovers recall) does not transfer as-is: our frames are blurrier and the false-positive load is far higher.
+- So the next detector has to be **trained** at the inference scale with many hard negatives: SoccerNet frames shrunk to
+  our ball size (x0.3) then upsampled x2, ball-free tiles from our feed (allowed: no labels involved), and judged on
+  top-1 precision, not recall. Plus the temporal layer (plan step 4), since per-frame top-1 is where it fails.
+- Detections stay local (`eda/out/ball/detections_*`); they are derived from BAR-ATH.
+
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with
 `src/pathcrf_run.py --trial 200 --dfl J03WMX` (GT dead frames substituted, PathCRF team on covered alive frames):

@@ -43,7 +43,10 @@ small, this is the innovation-round piece: a clean, documented use of public hum
    even the 80% case gains less than ~0.02, steps 3-5 are for the innovation round only.
 2. **Data** (laptop). **Day one done 2026-11-03** (NOTES "SoccerNet ball data, day one", `src/soccernet.py`): format
    confirmed, ball is ~3.3x smaller on our feed, zero-shot COCO recall 0.58 native / 0.18 at our size / 0.53 when upsampled
-   x2.2. Next: our existing detector on 2x upsampled tiles vs the ATD, then fine-tune with shrink-and-upsample.
+   x2.2. **Upsampled tiles on our feed tried 2026-11-03: negative** (NOTES "Upsampled tiles on our feed"): our weights at x2
+   go from 1.3 m to 16.5 m median error (false positives win the top-1); stock COCO is unusable on our feed. Next: train at
+   the inference scale (SoccerNet x0.3 then x2, plus ball-free tiles from our feed as negatives), judge top-1 precision,
+   and add the temporal layer (step 4). Tools: `src/ball_detect.py --infer --up 2 --weights <pt>` and `--check`.
    - `aws s3 cp s3://more-than-a-hack-2027/external/soccernet/SN-Tracking-2023/train.zip . --profile mtah`; unzip
      outside the repo.
    - Pull the ball boxes per clip from `gt.txt`, using the `gameinfo.ini` id of the ball. Count frames with a ball box
