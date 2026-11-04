@@ -329,7 +329,16 @@ share of the pitch it controls (Voronoi = nearest player, on a 21x14 grid), shar
 and ±2 s rolling means. 12 s per match. Behind a flag so the default features (and the BiGRU) are unchanged.
 Metrica match 1 (degraded ball), AUC separating H from A possession frames: **hull difference 0.775**, Voronoi 0.664, near-ball
 share 0.621; current best team feature `ddiff` 0.685. The team in possession spreads out, and the hull needs no ball (missing
-on 43% of our frames). DFL leave-one-out (HGB, `SPACE=1 TAG=_space eda/dead_diag.py`) vs `_det0` 0.438: running.
+on 43% of our frames). DFL leave-one-out (HGB, `SPACE=1 TAG=_space eda/dead_diag.py`, same code and degradation as `_det0`):
+
+| DFL 7 folds, HGB | spellF1 / macroF1, own dead balls | with GT dead balls (oracle D) | false D runs |
+|---|---|---|---|
+| `_det0` baseline | 0.438 / 0.828 | 0.474 / 0.869 | 56 |
+| **+ team shape (`SPACE=1`)** | **0.486 / 0.856** | **0.528 / 0.897** | 52 |
+
++0.048 spellF1. Most of it is the team call (the oracle-D row gains as much); dead-ball detection is about unchanged (missed
+stoppages 36 -> 39, false runs 56 -> 52). Biggest single feature gain since the since/until features. Next: BiGRU retrain with
+`SPACE=1` (Brandon), and a PathCRF + HGB/BiGRU team blend, since PathCRF supplies the submission's team call.
 Where it would land: the BiGRU dead-ball model reads these features directly; the team call comes from PathCRF, so for team
 it would need a blend, or use where PathCRF loses players.
 
