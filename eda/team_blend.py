@@ -7,7 +7,7 @@ truly alive frames), so a bonus that also raised "alive" would leak the true dea
 import os, sys, numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from src.v2 import IDS, decode as hgb_decode
-from src.seq import decode as seq_decode
+from src.seq import decode as seq_decode, soft_team
 from src.possession import score
 
 def run(tag):
@@ -26,7 +26,8 @@ def run(tag):
     for w in (0.5, 1, 2, 4):
         preds = []
         for lp, pc, d in zip(lps, pcs, own):
-            e = np.full_like(lp, -20.0); a = d != "D"; e[~a, 2] = 0
+            if kind == "seq": preds.append(soft_team(lp, d, pc, w).astype(str)); continue
+            e = np.full_like(lp, -20.0); a = d != "D"; e[~a, 2] = 0                       # same as soft_team, HGB decoder
             e[a, :2] = lp[a, :2] - np.logaddexp(lp[a, 0], lp[a, 1])[:, None]; e[a & (pc == "H"), 0] += w; e[a & (pc == "A"), 1] += w
             p = dec(e).astype(str); p[~a] = "D"; preds.append(p)
         show(f"soft w={w}", preds)

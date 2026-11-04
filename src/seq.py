@@ -4,7 +4,8 @@ from hand-made rolling features.
 
     .venv/bin/python src/seq.py --cv [--epochs 8]    # leave-one-match-out on DFL
     .venv/bin/python src/seq.py --train              # fit on all 7 -> src/seq_model.pt
-    .venv/bin/python src/seq.py                      # BAR-ATH -> evaluation/results/seq.csv
+    .venv/bin/python src/seq.py                      # BAR-ATH -> evaluation/results/seq.csv (+ log-probs for --blend)
+    .venv/bin/python src/seq.py --blend              # after src/pathcrf_run.py: soft PathCRF team vote -> evaluation/results/pathcrf.csv
 """
 import argparse, os, sys
 import numpy as np
@@ -16,6 +17,8 @@ import torch, torch.nn as nn
 MODEL = os.path.join(ROOT, "src/seq_model.pt"); WIN = 750; HID = 64
 FOLDS = os.path.join(ROOT, f"eda/out/seq_folds{os.environ.get('TAG', '')}.npz"); HGB_FOLDS = os.path.join(ROOT, "eda/out/dead_folds_carry2.npz")   # eda/dead_diag.py TAG=_carry2   # 30 s windows at 25 fps
 DEV = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+BARATH_LP = os.path.join(ROOT, "eda/out/seq_barath_logp.npy"); PC_TEAM = os.path.join(ROOT, "eda/out/pathcrf_barath_team.npy")   # local only (BAR-ATH-derived)
+BLEND_W = 4.0   # PathCRF's team vote in soft_team: DFL leave-one-out 0.602 vs 0.588 hard, better on 7/7 folds (eda/team_blend.py, 2026-11-04)
 S = dict(temp=1.0, switch=3.0, switch_d=3.0)   # DFL leave-one-out, 8 epochs (pod, 2026-10-27): switch 3 -> spellF1 0.603 / macroF1 0.914, 6 -> 0.598, 10 -> 0.590, 15 -> 0.577
 
 class Net(nn.Module):
@@ -78,6 +81,21 @@ def combine(lp_seq, lp_hgb):
     alive = np.logaddexp(lp_hgb[:, 0], lp_hgb[:, 1]); ha = lp_seq[:, :2] - np.logaddexp(lp_seq[:, 0], lp_seq[:, 1])[:, None]
     return np.column_stack([alive[:, None] + ha, lp_hgb[:, 2]])
 
+def soft_team(lp, dead, pc, w=BLEND_W, s=S):
+    """Dead balls kept exactly (dead = label array, "D" = dead); on the other frames a Viterbi over H/A only, with the BiGRU's
+    team log-prob plus w for PathCRF's team (pc in H/A; anything else = not covered, no vote). A confident BiGRU can overrule it."""
+    a = dead != "D"; e = np.full_like(lp, -20.0); e[~a, 2] = 0
+    e[a, :2] = lp[a, :2] - np.logaddexp(lp[a, 0], lp[a, 1])[:, None]; e[a & (pc == "H"), 0] += w; e[a & (pc == "A"), 1] += w
+    p = decode(e, s).astype(object); p[~a] = "D"; return p
+
+def blend(seq_csv, out):
+    import pandas as pd
+    lab = pd.read_csv(seq_csv)["label"].values.astype(str); lp = np.load(BARATH_LP); pc = np.load(PC_TEAM).astype(str)
+    p = soft_team(lp, lab, pc); pd.DataFrame({"frame": np.arange(len(p)), "label": p}).to_csv(out, index=False)
+    gt = pd.read_csv(os.path.join(ROOT, "evaluation/gt/BAR-ATH_possession_gt_public.csv"))["label"].values
+    a = lab != "D"; print("changed vs hard PathCRF on alive frames: %.3f" % (p[a & np.isin(pc, ["H", "A"])] != pc[a & np.isin(pc, ["H", "A"])]).mean())
+    print("BAR-ATH public window (sanity only):", score(gt, p)); print("wrote", out)
+
 def train(epochs):
     games = [dfl_game(m, k) for k, m in enumerate(IDS)]; _, names = features(games[0], (105.0, 68.0)); net = fit(games, epochs, names)
     torch.save({"state": net.state_dict(), "names": names}, MODEL); print("->", MODEL)
@@ -87,11 +105,13 @@ def run_barath(out, switch=S["switch"]):
     m = torch.load(MODEL, map_location="cpu"); d = load("tactical"); d["fps"] = 25; F = len(d["ball"])
     X, names = features(d, GAMES[GAME]["pitch"]); assert names == m["names"]; net = Net(len(names)).to(DEV); net.load_state_dict(m["state"])
     lp = logp(net, X); alive = np.zeros(F, bool); alive[11185:90652] = True; alive[113742:190198] = True; lp[~alive, :2] = -20
+    os.makedirs(os.path.dirname(BARATH_LP), exist_ok=True); np.save(BARATH_LP, lp)
     lab = decode(lp, dict(S, switch=switch, switch_d=switch)); pd.DataFrame({"frame": np.arange(F), "label": lab}).to_csv(out, index=False)
     gt = pd.read_csv(os.path.join(ROOT, "evaluation/gt/BAR-ATH_possession_gt_public.csv"))["label"].values
     print("BAR-ATH public window (sanity only):", score(gt, lab)); print("wrote", out)
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("--cv", action="store_true"); ap.add_argument("--train", action="store_true"); ap.add_argument("--epochs", type=int, default=8)
+    ap = argparse.ArgumentParser(); ap.add_argument("--cv", action="store_true"); ap.add_argument("--train", action="store_true"); ap.add_argument("--blend", action="store_true"); ap.add_argument("--epochs", type=int, default=8)
     ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/seq.csv")); ap.add_argument("--switch", type=float, default=S["switch"]); a = ap.parse_args()
-    cv(a.epochs) if a.cv else train(a.epochs) if a.train else run_barath(a.out, a.switch)
+    if a.blend: blend(os.path.join(ROOT, "evaluation/results/seq.csv"), os.path.join(ROOT, "evaluation/results/pathcrf.csv"))
+    else: cv(a.epochs) if a.cv else train(a.epochs) if a.train else run_barath(a.out, a.switch)

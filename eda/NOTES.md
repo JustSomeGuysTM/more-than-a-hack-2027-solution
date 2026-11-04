@@ -6,7 +6,8 @@ pip install -r requirements.txt            # this repo's .venv, data/ unpacked a
 gh auth login                              # needs access to the team repo (weights live in its GitHub release `pathcrf-weights`)
 bash pod/pathcrf_setup.sh                  # clones+patches PathCRF into ~/pathcrf, venv, weights, BAR-ATH parquet, inference
 ```
-Writes `evaluation/results/pathcrf.csv` (PathCRF home/away on alive frames, dead balls from our BiGRU) and prints the
+Writes `evaluation/results/pathcrf.csv` (PathCRF home/away on alive frames, dead balls from our BiGRU; since 2026-11-04 the
+team call is the soft blend `src/seq.py --blend`, PathCRF vote w=4, see "BiGRU and the PathCRF team blend") and prints the
 public-window sanity score. `TRIAL=140` runs the authors' checkpoint (shipped in their repo) instead of our trial 401 (the submitted model).
 Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and CV numbers are in the PathCRF section below.
 
@@ -356,6 +357,10 @@ Per fold vs today (hard, plain BiGRU): **soft w=4, plain BiGRU: +0.014, better o
 lifts the BiGRU alone by +0.051, but with PathCRF on team it adds nothing under hard (-0.003, 2/7) and about +0.01 under soft:
 PathCRF already captures the shape signal, and the features don't improve the dead-ball calls. w picked on the same folds (only
 2 and 4 tried; both positive). Adopting soft w=4 is a decode change only (BiGRU log-probs + PathCRF labels, no retraining).
+**Adopted 2026-11-04** (`src/seq.py --blend`, `BLEND_W = 4`, last step of `pod/pathcrf_setup.sh`; same `soft_team` function as
+the CV). Before switching, `seq.csv` and the hard `pathcrf.csv` both reproduced byte-identical. BAR-ATH: 1,147 of 199,319 frames
+change (team only, dead balls identical; 1.3% of PathCRF-covered alive frames); public window (sanity only) 0.660 / 0.886 vs
+0.660 / 0.884 hard. `validate_submission.py`: valid.
 
 ### Detector reruns with the colour fix (2026-11-04)
 Top-5, dense windows, graded play (624 frames), vs the ATD; old numbers (colour-swapped) in brackets.
