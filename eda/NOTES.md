@@ -339,6 +339,37 @@ on 43% of our frames). DFL leave-one-out (HGB, `SPACE=1 TAG=_space eda/dead_diag
 +0.048 spellF1. Most of it is the team call (the oracle-D row gains as much); dead-ball detection is about unchanged (missed
 stoppages 36 -> 39, false runs 56 -> 52). Biggest single feature gain since the since/until features. Next: BiGRU retrain with
 `SPACE=1` (Brandon), and a PathCRF + HGB/BiGRU team blend, since PathCRF supplies the submission's team call.
+
+**BiGRU and the PathCRF team blend** (`eda/team_blend.py`, 2026-11-04). The submission is BiGRU dead balls + PathCRF team, so
+these rows decide. BiGRU folds rerun on current code (`TAG=_base`; the Oct 28 cache gives the same 0.590 hard).
+*Hard* = today: PathCRF's team wherever it covers the frame. *Soft w* = dead balls exactly as the BiGRU decodes them; on its
+alive frames a Viterbi over H/A only, with the BiGRU's team log-prob plus a bonus w for PathCRF's team, so a confident BiGRU can
+overrule PathCRF. (A first soft version also let the bonus raise "alive": PathCRF's DFL outputs only cover truly alive frames,
+so that leaked the true dead balls and scored 0.621, rising with w. Discarded.)
+
+| DFL 7 folds, spellF1 / macroF1 | BiGRU alone | hard (today) | soft w=2 | soft w=4 |
+|---|---|---|---|---|
+| BiGRU | 0.467 / 0.841 | 0.588 / 0.890 | 0.597 / 0.890 | **0.602 / 0.891** |
+| BiGRU + team shape (`SPACE=1`) | 0.518 / 0.866 | 0.585 / 0.888 | 0.601 / 0.890 | 0.598 / 0.889 |
+
+Per fold vs today (hard, plain BiGRU): **soft w=4, plain BiGRU: +0.014, better on 7/7 folds** (+0.007 to +0.018). Team shape
+lifts the BiGRU alone by +0.051, but with PathCRF on team it adds nothing under hard (-0.003, 2/7) and about +0.01 under soft:
+PathCRF already captures the shape signal, and the features don't improve the dead-ball calls. w picked on the same folds (only
+2 and 4 tried; both positive). Adopting soft w=4 is a decode change only (BiGRU log-probs + PathCRF labels, no retraining).
+
+### Detector reruns with the colour fix (2026-11-04)
+Top-5, dense windows, graded play (624 frames), vs the ATD; old numbers (colour-swapped) in brackets.
+
+| detector | top-1 conf 0.25: detects / >5 m off | tracked (Viterbi): detects / >5 m off | detects on ATD-missing (tracked) |
+|---|---|---|---|
+| current weights, BGR fix | 89% / 13% (87% / 15%) | **88% / 10%** (87% / 12%) | 46% (41%) |
+| SoccerNet 20 px boxes, fine-tuned from ours (`sn20ft`) | 91% / 16% | 89% / 12% | 52% |
+| GRU scorer (`ball_scorer.py`) on current BGR candidates, p >= 0.5 | | 80% / 11% (p 0.3: 85% / 13%) | 46% |
+
+- Colour fix: a small real gain (gross 12% -> 10% tracked). The fine-tune fires on more frames the ATD misses (52% vs 46%), which
+  can't be checked against the ATD, but on checkable frames it is no more accurate: not adopted. Weights `src/ball_yolov8n_sn20ft.pt`.
+- The SoccerNet-trained scorer does not beat the hand-set Viterbi on our feed at any threshold: negative transfer. Parked.
+
 Where it would land: the BiGRU dead-ball model reads these features directly; the team call comes from PathCRF, so for team
 it would need a blend, or use where PathCRF loses players.
 

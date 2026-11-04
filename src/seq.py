@@ -14,7 +14,7 @@ from src.possession import viterbi, score, LAB, min_dead
 from src.v2 import IDS, dfl_game, mirror
 import torch, torch.nn as nn
 MODEL = os.path.join(ROOT, "src/seq_model.pt"); WIN = 750; HID = 64
-FOLDS = os.path.join(ROOT, "eda/out/seq_folds.npz"); HGB_FOLDS = os.path.join(ROOT, "eda/out/dead_folds_carry2.npz")   # eda/dead_diag.py TAG=_carry2   # 30 s windows at 25 fps
+FOLDS = os.path.join(ROOT, f"eda/out/seq_folds{os.environ.get('TAG', '')}.npz"); HGB_FOLDS = os.path.join(ROOT, "eda/out/dead_folds_carry2.npz")   # eda/dead_diag.py TAG=_carry2   # 30 s windows at 25 fps
 DEV = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 S = dict(temp=1.0, switch=3.0, switch_d=3.0)   # DFL leave-one-out, 8 epochs (pod, 2026-10-27): switch 3 -> spellF1 0.603 / macroF1 0.914, 6 -> 0.598, 10 -> 0.590, 15 -> 0.577
 

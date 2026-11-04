@@ -89,6 +89,7 @@ def pick(m, X, thr=0.5):
     """Per frame: chosen slot or K, and its probability."""
     import torch
     with torch.no_grad(): p = torch.softmax(m(torch.tensor(X)[None])[0], 1).numpy()
+    p[:, :K] *= X.reshape(len(X), K, -1)[:, :, 0]                                   # empty slots can't be picked
     j = p[:, :K].argmax(1); pj = p[np.arange(len(j)), j]; return np.where(pj >= thr, j, K), pj
 
 def report(m, va):

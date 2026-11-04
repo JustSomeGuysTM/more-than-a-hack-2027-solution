@@ -114,7 +114,7 @@ def train(epochs=25, up=UP, box=0, init="yolov8n.pt"):
     from ultralytics import YOLO; import shutil; D = data_dir(up, box)
     m = YOLO(init); m.train(data=os.path.join(D, "ball.yaml"), imgsz=T, epochs=epochs, batch=32, device="mps", project=os.path.join(D, "runs"), name="ball", exist_ok=True,
                                      mosaic=0.5, scale=0.2, fliplr=0.5, pretrained=True, verbose=False)
-    tag = 'up2' if up != 1 else f"sn{box or ''}" + ('ft' if init != "yolov8n.pt" else ''); out = os.path.join(ROOT, f"src/ball_yolov8n_{tag}.pt"); shutil.copy(os.path.join(D, "runs/ball/weights/best.pt"), out); print("->", out)
+    tag = 'up2' if up != 1 else ("sn%g" % box if box else "sn") + ('ft' if init != "yolov8n.pt" else ''); out = os.path.join(ROOT, f"src/ball_yolov8n_{tag}.pt"); shutil.copy(os.path.join(D, "runs/ball/weights/best.pt"), out); print("->", out)
 
 def main(a):
     clips = sorted(glob.glob(os.path.join(SN, "SNMOT-*"))); q = [5, 25, 50, 75, 95]; cov, sizes = [], []
