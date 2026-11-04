@@ -6,6 +6,7 @@
     .venv/bin/python src/soccernet.py --build          # YOLO set at the x2 inference scale -> data_raw/ball_up2/ (needs all images unzipped)
     .venv/bin/python src/soccernet.py --train          # YOLOv8n from COCO on it -> src/ball_yolov8n_up2.pt (bucket only: it saw our match's tiles)
         --up 1 on both: native scale (data_raw/ball_sn -> src/ball_yolov8n_sn.pt)
+        --up 1 --box 20 [--init src/ball_yolov8n.pt]: 20 px label boxes, fine-tuned from our weights -> src/ball_yolov8n_sn20ft.pt
 """
 import argparse, configparser, glob, os, sys
 import numpy as np
@@ -58,7 +59,7 @@ def zeroshot(runs=((1.0, 1), (0.3, 1), (0.3, 2.2)), step=15, conf=0.1):
 UP = 2.0; T = 640; OUR_PX = (3.0, 7.0)   # inference upsampling; our ball diameter p5-p95 on the tactical feed (px, native)
 UP2 = os.path.join(ROOT, "data_raw/ball_up2"); VAL_CLIPS = 10   # last 10 SoccerNet clips held out
 
-data_dir = lambda up: UP2 if up != 1 else os.path.join(ROOT, "data_raw/ball_sn")
+data_dir = lambda up, box=0: UP2 if up != 1 else os.path.join(ROOT, "data_raw/ball_sn" + (f"{box:g}" if box else ""))
 
 def _save(D, split, name, img, box=None):
     import cv2
@@ -72,12 +73,13 @@ def _crop(r, img, u=None, v=None):
     y0 = int(np.clip(v - r.integers(40, max(41, th - 40)), 0, h - th)) if v is not None else int(r.integers(0, h - th + 1))
     return img[y0:y0 + th, x0:x0 + tw], x0, y0
 
-def build(step=5, up=UP):
+def build(step=5, up=UP, box=0):
     """SoccerNet frames shrunk so the ball has our native size (random over OUR_PX), softened, then upsampled x UP exactly as
     `src/ball_detect.py --infer --up` does; one ball tile + one ball-free tile per frame. Plus our own ATD tiles
     (data_raw/ball, algorithmic labels) upsampled x UP. Labels are boxes in the crop, YOLO format. up=1: the native set
-    (data_raw/ball_sn), inference without upsampling."""
-    import cv2, shutil; r = np.random.default_rng(0); D = data_dir(up); shutil.rmtree(D, ignore_errors=True); n = {}
+    (data_raw/ball_sn), inference without upsampling. box: label box side in px (0 = ball size, min 6 px; 20 = the convention
+    the current weights were trained with: context for the stride-8 head) -> data_raw/ball_sn{box}."""
+    import cv2, shutil; r = np.random.default_rng(0); D = data_dir(up, box); shutil.rmtree(D, ignore_errors=True); n = {}
     for sp in ("train", "val"):
         for q in ("images", "labels"): os.makedirs(os.path.join(D, sp, q))
     clips = sorted(glob.glob(os.path.join(SN, "SNMOT-*")))
@@ -89,7 +91,7 @@ def build(step=5, up=UP):
             img = cv2.imread(os.path.join(c, "img1", f"{f:06d}.jpg")); small = cv2.resize(img, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
             small = cv2.GaussianBlur(small, (0, 0), r.uniform(0.3, 0.8))                       # our feed is softer than broadcast
             big = cv2.resize(small, None, fx=up, fy=up, interpolation=cv2.INTER_CUBIC) if up != 1 else small; k = s * up
-            u, v, bw = (x + w / 2) * k, (y + h / 2) * k, max(size * k, 6)
+            u, v, bw = (x + w / 2) * k, (y + h / 2) * k, max(size * k, box or 6)
             tile, x0, y0 = _crop(r, big, u, v); th, tw = tile.shape[:2]
             _save(D, sp, f"sn{ci:02d}_{f}_pos", tile, ((u - x0) / tw, (v - y0) / th, bw / tw, bw / th)); n[sp, "sn_pos"] = n.get((sp, "sn_pos"), 0) + 1
             for _ in range(5):
@@ -102,16 +104,17 @@ def build(step=5, up=UP):
             img = cv2.imread(p); img = cv2.resize(img, None, fx=up, fy=up, interpolation=cv2.INTER_CUBIC) if up != 1 else img; lab = open(p.replace("/images/", "/labels/")[:-4] + ".txt").read().split()
             name = "our_" + os.path.basename(p)[:-4]
             if lab:
-                u, v = float(lab[1]) * T * up, float(lab[2]) * T * up; tile, x0, y0 = _crop(r, img, u, v); bw = 6 * up   # ball ~4 px native + snap slack
+                u, v = float(lab[1]) * T * up, float(lab[2]) * T * up; tile, x0, y0 = _crop(r, img, u, v); bw = (box or 6) * up   # ball ~4 px native + snap slack
                 _save(D, sp, name, tile, ((u - x0) / T, (v - y0) / T, bw / T, bw / T)); n[sp, "our_pos"] = n.get((sp, "our_pos"), 0) + 1
             else: _save(D, sp, name, _crop(r, img)[0]); n[sp, "our_neg"] = n.get((sp, "our_neg"), 0) + 1
     open(os.path.join(D, "ball.yaml"), "w").write(f"path: {D}\ntrain: train/images\nval: val/images\nnames:\n  0: ball\n"); print(n)
 
-def train(epochs=25, up=UP):
-    from ultralytics import YOLO; import shutil; D = data_dir(up)
-    m = YOLO("yolov8n.pt"); m.train(data=os.path.join(D, "ball.yaml"), imgsz=T, epochs=epochs, batch=32, device="mps", project=os.path.join(D, "runs"), name="ball", exist_ok=True,
+def train(epochs=25, up=UP, box=0, init="yolov8n.pt"):
+    """init: COCO, or a path to fine-tune existing weights (e.g. src/ball_yolov8n.pt)."""
+    from ultralytics import YOLO; import shutil; D = data_dir(up, box)
+    m = YOLO(init); m.train(data=os.path.join(D, "ball.yaml"), imgsz=T, epochs=epochs, batch=32, device="mps", project=os.path.join(D, "runs"), name="ball", exist_ok=True,
                                      mosaic=0.5, scale=0.2, fliplr=0.5, pretrained=True, verbose=False)
-    out = os.path.join(ROOT, f"src/ball_yolov8n_{'up2' if up != 1 else 'sn'}.pt"); shutil.copy(os.path.join(D, "runs/ball/weights/best.pt"), out); print("->", out)
+    tag = 'up2' if up != 1 else f"sn{box or ''}" + ('ft' if init != "yolov8n.pt" else ''); out = os.path.join(ROOT, f"src/ball_yolov8n_{tag}.pt"); shutil.copy(os.path.join(D, "runs/ball/weights/best.pt"), out); print("->", out)
 
 def main(a):
     clips = sorted(glob.glob(os.path.join(SN, "SNMOT-*"))); q = [5, 25, 50, 75, 95]; cov, sizes = [], []
@@ -122,11 +125,11 @@ def main(a):
     print(f"SoccerNet: {len(clips)} clips, {len(s)} ball boxes, ball labelled on {np.mean(cov):.0%} of frames (clip p10/p50/p90 {np.round(np.percentile(cov, [10, 50, 90]), 2)})")
     print(f"  ball size px (sqrt w*h) p5/25/50/75/95: {np.round(np.percentile(s, q), 1)}")
     if a.zeroshot: return zeroshot()
-    if a.build: return build(up=a.up)
-    if a.train: return train(a.epochs, a.up)
+    if a.build: return build(up=a.up, box=a.box)
+    if a.train: return train(a.epochs, a.up, a.box, a.init)
     if a.ours:
         o = ours(); print(f"ours (tactical, {len(o)} confident hits): ball diameter px p5/25/50/75/95: {np.round(np.percentile(o, q), 1)}")
         print(f"  scale SoccerNet frames by ~{np.median(o) / np.median(s):.2f} (median) to match")
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("--ours", action="store_true"); ap.add_argument("--zeroshot", action="store_true"); ap.add_argument("--build", action="store_true"); ap.add_argument("--train", action="store_true"); ap.add_argument("--epochs", type=int, default=25); ap.add_argument("--up", type=float, default=UP); main(ap.parse_args())
+    ap = argparse.ArgumentParser(); ap.add_argument("--ours", action="store_true"); ap.add_argument("--zeroshot", action="store_true"); ap.add_argument("--build", action="store_true"); ap.add_argument("--train", action="store_true"); ap.add_argument("--epochs", type=int, default=25); ap.add_argument("--up", type=float, default=UP); ap.add_argument("--box", type=float, default=0); ap.add_argument("--init", default="yolov8n.pt"); main(ap.parse_args())

@@ -299,6 +299,40 @@ the current weights were trained with 20 px boxes around the same ball, which gi
 if anyone continues: rebuild with 20 px boxes at native scale, or fine-tune the current weights on SoccerNet instead of
 training from COCO.
 
+### Colour-order bug in `ball_detect.infer` (fixed 2026-11-04)
+ffmpeg decodes rgb24 and `infer` passed those arrays straight to ultralytics, which treats arrays as BGR (and reads the training
+jpgs as BGR). So every detection pass so far ran colour-swapped. On SoccerNet (clip SNMOT-062, 30 frames at our ball size, our
+weights) the ball is among the candidates on 11/30 frames swapped vs **21/30** in the right order. Fixed with one line; the old
+top-5 files are kept as `eda/out/ball/*_rgb.npz` so the tables above stay reproducible. Every detector number above (87% / 0.9 m /
+12% gross) was measured with the swap: reruns with the fix are in progress. The submission never reads detector output
+(`v2.py --source tactical` default), so it is unaffected.
+
+### Learned candidate scorer (`src/ball_scorer.py`, 2026-11-04)
+The "learned version" of plan step 4. Our weights (now in BGR) on every frame of all 57 SoccerNet clips shrunk to our ball size
+(4.2 px), CPU, top-5 merged as `infer` (26,934 candidates). Per frame and slot: present, conf, and for frames t-2, t-1, t+1, t+2 the
+distance to the nearest candidate (capped 40 px) and its conf. A 2-layer BiGRU (hidden 48) picks a slot or "none"; label = slot
+within max(3 px, ball size) of the human box. 47 clips train, last 10 held out (as `soccernet.VAL_CLIPS`), 60 epochs of random
+8 s windows. Pixel space on purpose, so it transfers to our feed (columns u, v of the detection files; both 25 fps).
+
+| held-out SoccerNet, 2,347 frames with the ball among the candidates | picked right | wrong picks |
+|---|---|---|
+| top-1 at conf 0.25 | 71% | 617 |
+| **GRU scorer (p >= 0.5)** | **75%** | **456** |
+
+Modest, and noisy across epochs (62-75%). Not yet run on our feed: needs the BGR top-5 rerun (`--ours <file>` scores it next to
+the Viterbi tracker on the same frames). Ideas for whoever picks it up: add player context (distance to the nearest player), more
+neighbour frames, train on candidates from whichever detector wins.
+
+### Team shape: convex hull and Voronoi share (`src/features.py`, `SPACE=1`, 2026-11-04)
+Idea from Elijah's Big Data Bowl 2022 work (penalised expected arrival time / space control). Per team: convex-hull area,
+share of the pitch it controls (Voronoi = nearest player, on a 21x14 grid), share of the grid within 15 m of the ball; plus ±0.5 s
+and ±2 s rolling means. 12 s per match. Behind a flag so the default features (and the BiGRU) are unchanged.
+Metrica match 1 (degraded ball), AUC separating H from A possession frames: **hull difference 0.775**, Voronoi 0.664, near-ball
+share 0.621; current best team feature `ddiff` 0.685. The team in possession spreads out, and the hull needs no ball (missing
+on 43% of our frames). DFL leave-one-out (HGB, `SPACE=1 TAG=_space eda/dead_diag.py`) vs `_det0` 0.438: running.
+Where it would land: the BiGRU dead-ball model reads these features directly; the team call comes from PathCRF, so for team
+it would need a blend, or use where PathCRF loses players.
+
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with
 `src/pathcrf_run.py --trial 200 --dfl J03WMX` (GT dead frames substituted, PathCRF team on covered alive frames):

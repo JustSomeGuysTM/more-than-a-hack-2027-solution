@@ -70,6 +70,7 @@ small, this is the innovation-round piece: a clean, documented use of public hum
    - Link them through time with a constant-velocity Kalman filter and a Viterbi (or multiple-hypothesis) search over
      candidates. The ball moves smoothly except at touches and rarely exceeds ~40 m/s. This replaces
      `ball_fuse.support`.
+   - (2026-11-04: first version in `src/ball_scorer.py`, 75% vs 71% right picks on held-out SoccerNet; see NOTES.)
    - Learned version: a small GRU over each candidate sequence (position, confidence, speed, distance to the nearest
      player) that scores "this candidate is the ball", trained on SoccerNet clips where the truth is known.
    - If YOLO's recall on tiny balls stays poor: a TrackNet-style heatmap network fed 3 stacked consecutive frames (the

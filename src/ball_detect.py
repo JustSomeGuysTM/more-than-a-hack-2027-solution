@@ -87,6 +87,7 @@ def infer(step, up=1.0, weights=WEIGHTS, topk=1, window=0):
     xs, ys = grid(W_), grid(H_)                                                   # up=1: the original 4x2 tiles (0/427/853/1280, 0/440)
     for f, img in frames(asset_paths(source="tactical")["video"], 1 if window else step):
         if not np.isfinite(H[f]).all() or (window and f % 500 >= window): continue
+        img = np.ascontiguousarray(img[..., ::-1])   # ffmpeg gives RGB; ultralytics treats arrays as BGR (as it reads the training jpgs)
         if up != 1: img = cv2.resize(img, (W_, H_), interpolation=cv2.INTER_CUBIC)
         tiles = [img[y:y + T, x:x + T] for y in ys for x in xs]
         res = m.predict(tiles, imgsz=T, conf=0.1, device="mps", verbose=False, classes=[32] if coco else None); cand = []
