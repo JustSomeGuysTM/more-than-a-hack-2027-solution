@@ -50,6 +50,8 @@ small, this is the innovation-round piece: a clean, documented use of public hum
    **Trained at x2, 2026-11-03** (`src/soccernet.py --build/--train`, NOTES "Detector trained at the x2 scale"): 2.4 m median /
    42% gross vs native's 1.4 m / 29% on held-out frames, so it does not replace the native detector. Next: SoccerNet at native
    scale added to the native set, then the temporal layer (step 4).
+   **Native scale tried 2026-11-04: negative** (NOTES "SoccerNet at native scale"): barely fires on our feed (10% vs 87%).
+   Next: 20 px label boxes as in `src/ball_detect.py`, or fine-tune the current weights on SoccerNet.
    - `aws s3 cp s3://more-than-a-hack-2027/external/soccernet/SN-Tracking-2023/train.zip . --profile mtah`; unzip
      outside the repo.
    - Pull the ball boxes per clip from `gt.txt`, using the `gameinfo.ini` id of the ball. Count frames with a ball box

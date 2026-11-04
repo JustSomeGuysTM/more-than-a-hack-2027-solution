@@ -289,6 +289,16 @@ the pitch and the ATD follows one: 77% of tracked frames there are "> 5 m off", 
   "good detector" (0.610) needs gross errors near 2%. Not adopted: needs a full-match top-k pass (~2.5 h + decode) and a
   BiGRU retrain with fills, for +0.01 inside fold noise.
 
+### SoccerNet at native scale: the model barely fires on our feed (2026-11-04)
+`src/soccernet.py --build --up 1` / `--train --up 1`: SoccerNet frames shrunk to our ball size (no upsampling) + our ATD tiles,
+YOLOv8n from COCO, 25 epochs (3.5 h). Held-out tiles: P 0.60, R 0.49, mAP50 0.43. Weights bucket `derived/ball_yolov8n_sn.pt`.
+On our feed (top-5, dense windows, graded play): detects on only **10%** of ATD-ball frames at conf 0.25 (current weights 87%),
+3% at 0.4; tracked 5%. When it fires it is right (0.8 m median), but it is far too unsure on our frames.
+Likely cause (untested): label boxes. This set labels the ~4 px ball with a 6 px box (SoccerNet boxes scaled the same way);
+the current weights were trained with 20 px boxes around the same ball, which gives the stride-8 head context. Next
+if anyone continues: rebuild with 20 px boxes at native scale, or fine-tune the current weights on SoccerNet instead of
+training from COCO.
+
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with
 `src/pathcrf_run.py --trial 200 --dfl J03WMX` (GT dead frames substituted, PathCRF team on covered alive frames):
