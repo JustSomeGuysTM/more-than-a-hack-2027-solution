@@ -47,6 +47,9 @@ small, this is the innovation-round piece: a clean, documented use of public hum
    go from 1.3 m to 16.5 m median error (false positives win the top-1); stock COCO is unusable on our feed. Next: train at
    the inference scale (SoccerNet x0.3 then x2, plus ball-free tiles from our feed as negatives), judge top-1 precision,
    and add the temporal layer (step 4). Tools: `src/ball_detect.py --infer --up 2 --weights <pt>` and `--check`.
+   **Trained at x2, 2026-11-03** (`src/soccernet.py --build/--train`, NOTES "Detector trained at the x2 scale"): 2.4 m median /
+   42% gross vs native's 1.4 m / 29% on held-out frames, so it does not replace the native detector. Next: SoccerNet at native
+   scale added to the native set, then the temporal layer (step 4).
    - `aws s3 cp s3://more-than-a-hack-2027/external/soccernet/SN-Tracking-2023/train.zip . --profile mtah`; unzip
      outside the repo.
    - Pull the ball boxes per clip from `gt.txt`, using the `gameinfo.ini` id of the ball. Count frames with a ball box

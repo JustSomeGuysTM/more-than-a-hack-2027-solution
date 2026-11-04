@@ -242,6 +242,28 @@ than the 2026-10-27 table, which used alive frames only):
   top-1 precision, not recall. Plus the temporal layer (plan step 4), since per-frame top-1 is where it fails.
 - Detections stay local (`eda/out/ball/detections_*`); they are derived from BAR-ATH.
 
+### Detector trained at the x2 scale: better than x2 with old weights, still worse than native (2026-11-03)
+`src/soccernet.py --build` (SoccerNet frames shrunk so the ball has our native size 3-7 px, blurred sigma 0.3-0.8, upsampled
+x2 like inference; one ball + one ball-free tile per 5th frame; 47 train / 10 held-out clips) + our ATD tiles from
+`data_raw/ball` upsampled x2: 8,671 ball / 7,857 empty train tiles. `--train`: YOLOv8n from COCO, 25 epochs, 3.4 h on MPS.
+Held-out tiles (SoccerNet + ours): P 0.59, R 0.51, mAP50 0.43. Weights `src/ball_yolov8n_up2.pt` (gitignored, bucket
+`derived/ball_yolov8n_up2.pt`: it saw our match's tiles). On our feed, every 50th frame **offset 25** (never a training tile;
+`--check ... --step 50 --offset 25`):
+
+| top-1, conf 0.25 | detects on ATD-ball frames | median error vs ATD | > 5 m off | detects on ATD-missing frames |
+|---|---|---|---|---|
+| native, current weights | 90% | 1.4 m | 29% | 38% |
+| x2, current weights | 100% | 17.0 m | 70% | 96% |
+| **x2, new weights** | 81% | 2.4 m | 42% | 42% |
+
+- Training at the scale fixes most of the x2 collapse, but it does not beat the native detector, so it does not
+  replace it. Gross errors (42% > 5 m) are what the dead-ball model cannot afford (ceiling check: "good" means 2%).
+- Caveat in the native model's favour: it was trained only on ATD-projected labels, so it shares the ATD's choices (e.g.
+  which ball in the warm-up); agreement with the ATD is not the same as being right.
+- Not tried, in order of promise: (1) SoccerNet at **native** scale added to the current native set (no upsampling, same
+  tiles at inference); (2) the temporal layer on top-k candidates (plan step 4): per-frame top-1 is where every
+  variant fails, and a smooth-track filter is what turned 42% gross into 12% for `ball_fuse.support`.
+
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with
 `src/pathcrf_run.py --trial 200 --dfl J03WMX` (GT dead frames substituted, PathCRF team on covered alive frames):
