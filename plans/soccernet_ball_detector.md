@@ -62,6 +62,8 @@ small, this is the innovation-round piece: a clean, documented use of public hum
    neighbouring frames are near-duplicates) plus our ATD-projected tiles. Hold out ~10 SoccerNet clips for honest
    precision, recall and localisation error. YOLOv8n trains on a laptop (MPS) or Colab; no rented GPU needed.
 4. **Temporal layer — where a GRU fits.** Detection stays per frame; the gain comes from linking frames.
+   **Viterbi version done 2026-11-03** (`src/ball_track.py`, NOTES "Temporal layer"): graded-play gross errors 15% -> 12% at
+   the same coverage; worth ~+0.013 on the DFL pipeline. The learned GRU scorer below is the next step if anyone continues.
    - Keep the top-k candidates per frame at low confidence, not just the best one.
    - Link them through time with a constant-velocity Kalman filter and a Viterbi (or multiple-hypothesis) search over
      candidates. The ball moves smoothly except at touches and rarely exceeds ~40 m/s. This replaces

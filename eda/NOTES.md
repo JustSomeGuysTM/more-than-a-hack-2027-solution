@@ -264,6 +264,31 @@ Held-out tiles (SoccerNet + ours): P 0.59, R 0.51, mAP50 0.43. Weights `src/ball
   tiles at inference); (2) the temporal layer on top-k candidates (plan step 4): per-frame top-1 is where every
   variant fails, and a smooth-track filter is what turned 42% gross into 12% for `ball_fuse.support`.
 
+### Temporal layer on top-k candidates (2026-11-03, `src/ball_track.py`)
+Viterbi over each frame's top-5 detections plus a "no ball" state: smooth motion is cheap (Gaussian on the step, hard cap
+1.6 m/frame = 40 m/s), switching the track on/off costs 4, tracks shorter than 5 frames are dropped. Self-test on a
+synthetic track with confident one-frame false positives. Candidates: current native weights, `--topk 5 --window 100`
+(dense stretches f % 500 < 100, ~20% of the match). Scored on frames f % 50 == 25 (never training tiles).
+
+**Score on graded play only** (`--graded`; ball_fuse's graded ranges). Outside it (warm-up, half-time) several balls are on
+the pitch and the ATD follows one: 77% of tracked frames there are "> 5 m off", which dominated the earlier tables.
+
+| graded play, 624 frames | detects on ATD-ball frames | median error | > 5 m off | detects on ATD-missing frames |
+|---|---|---|---|---|
+| top-1, conf 0.25 | 87% | 0.9 m | 15% | 49% |
+| top-1, conf 0.6 | 48% | 0.7 m | 11% | 14% |
+| **tracked** | 87% | 0.9 m | 12% | 41% |
+| x2 weights, top-1 conf 0.25 (every 50th +25, 3,118 frames) | 77% | 1.4 m | 30% | 49% |
+
+- The tracker keeps conf-0.25 coverage at about conf-0.6 precision. Remaining gross errors: in 81% of them no top-5 candidate is
+  within 2 m of the ATD, so the detector never saw that ball (or the ATD is wrong); smoothing cannot fix those.
+- Parameter sweep (on / none / min_len / sigma, chosen on even windows, reported on odd): the pick did not transfer
+  (10% -> 14% gross); defaults kept. Lower gross (6%) costs coverage (62-68%).
+- **Worth on DFL:** that profile in the simulator (`DET=0.5,0.12,0.75`: ~40% of hidden frames, 12% gross, 0.9 m) gives
+  pipeline **0.603 / 0.905** vs 0.590 / 0.890 with today's BiGRU (+0.013) and 0.597 for the untracked detector. Real, small; the
+  "good detector" (0.610) needs gross errors near 2%. Not adopted: needs a full-match top-k pass (~2.5 h + decode) and a
+  BiGRU retrain with fills, for +0.01 inside fold noise.
+
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with
 `src/pathcrf_run.py --trial 200 --dfl J03WMX` (GT dead frames substituted, PathCRF team on covered alive frames):

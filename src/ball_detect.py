@@ -5,7 +5,7 @@ where the ATD has none.
     .venv/bin/python src/ball_detect.py --extract   # every 50th frame -> YOLO dataset under data_raw/ball/ (~12 min, one video decode)
     .venv/bin/python src/ball_detect.py --train     # YOLOv8n on 640x640 tiles (MPS, ~1 h)
     .venv/bin/python src/ball_detect.py --infer     # all frames -> eda/out/ball/detections.npz (frame, x_m, y_m, conf)
-        [--up 2] [--weights coco] [--step 5]        # upsampled tiles / stock COCO yolov8n; tag in the file name
+        [--up 2] [--weights coco|<pt>] [--step 5] [--topk 5 --window 100]   # tag in the file name; window = dense stretches
     .venv/bin/python src/ball_detect.py --check eda/out/ball/detections.npz --step 50 [--offset 25]   # vs the ATD ball
 
 Pseudo-label = ATD ball projected through the frame's homography, then snapped to the brightest
@@ -77,32 +77,38 @@ def train(epochs):
     m = YOLO("yolov8n.pt"); m.train(data=f"{DATA}/ball.yaml", imgsz=T, epochs=epochs, batch=32, device="mps", project=f"{DATA}/runs", name="ball", exist_ok=True, mosaic=0.5, scale=0.2, fliplr=0.5, pretrained=True, verbose=False)
     import shutil; shutil.copy(f"{DATA}/runs/ball/weights/best.pt", WEIGHTS); print("->", WEIGHTS)
 
-def infer(step, up=1.0, weights=WEIGHTS):
-    """Top-1 detection per frame. up > 1 upsamples the frame first (our ball is ~4 px, too small for YOLO's stride; see
-    eda/NOTES.md "SoccerNet ball data, day one"); tiles of 640 with >= 20% overlap. weights=coco: stock yolov8n, sports ball."""
+def infer(step, up=1.0, weights=WEIGHTS, topk=1, window=0):
+    """Top-k detections per frame (rows sorted by confidence; candidates within 10 px merged). up > 1 upsamples the frame
+    first (see eda/NOTES.md "SoccerNet ball data, day one"); tiles of 640 with >= 20% overlap. weights=coco: stock yolov8n,
+    sports ball. window=N: only frames with f % 500 < N (dense stretches for src/ball_track.py), decoded at step 1."""
     import cv2; from ultralytics import YOLO
     coco = weights == "coco"; m = YOLO("yolov8n.pt" if coco else weights); H = homographies(); rows = []
     W_, H_ = int(VW * up), int(VH * up); grid = lambda n: np.linspace(0, n - T, int(np.ceil((n - T) / (T * 0.8))) + 1).astype(int)
     xs, ys = grid(W_), grid(H_)                                                   # up=1: the original 4x2 tiles (0/427/853/1280, 0/440)
-    for f, img in frames(asset_paths(source="tactical")["video"], step):
-        if not np.isfinite(H[f]).all(): continue
+    for f, img in frames(asset_paths(source="tactical")["video"], 1 if window else step):
+        if not np.isfinite(H[f]).all() or (window and f % 500 >= window): continue
         if up != 1: img = cv2.resize(img, (W_, H_), interpolation=cv2.INTER_CUBIC)
         tiles = [img[y:y + T, x:x + T] for y in ys for x in xs]
-        res = m.predict(tiles, imgsz=T, conf=0.1, device="mps", verbose=False, classes=[32] if coco else None); best = None
+        res = m.predict(tiles, imgsz=T, conf=0.1, device="mps", verbose=False, classes=[32] if coco else None); cand = []
         for (x, y), r in zip([(x, y) for y in ys for x in xs], res):
-            for bx, cf in zip(r.boxes.xywh.cpu().numpy(), r.boxes.conf.cpu().numpy()):
-                if best is None or cf > best[2]: best = ((x + bx[0]) / up, (y + bx[1]) / up, float(cf))
-        if best: px, py = to_pitch(H[f], best[0], best[1]); rows.append((f, px, py, best[2], best[0], best[1]))
+            cand += [((x + bx[0]) / up, (y + bx[1]) / up, float(cf)) for bx, cf in zip(r.boxes.xywh.cpu().numpy(), r.boxes.conf.cpu().numpy())]
+        kept = []
+        for u, v, cf in sorted(cand, key=lambda c: -c[2]):
+            if len(kept) < topk and all(np.hypot(u - a, v - b) > 10 for a, b, _ in kept): kept.append((u, v, cf))
+        for u, v, cf in kept: px, py = to_pitch(H[f], u, v); rows.append((f, px, py, cf, u, v))
         if f % 5000 == 0: print(f, len(rows), flush=True)
-    tag = ("_coco" if coco else "") + (f"_up{up:g}" if up != 1 else "") + ("" if step == 1 else "_step" + str(step))
-    os.makedirs(OUT, exist_ok=True); np.savez_compressed(f"{OUT}/detections{tag}.npz", det=np.array(rows, np.float32)); print("detections", len(rows))
+    tag = ("_coco" if coco else "" if weights == WEIGHTS else "_" + os.path.basename(weights)[:-3].replace("ball_yolov8n_", "")) + (f"_up{up:g}" if up != 1 else "") + \
+          (f"_top{topk}" if topk > 1 else "") + (f"_win{window}" if window else "" if step == 1 else "_step" + str(step))
+    os.makedirs(OUT, exist_ok=True); np.savez_compressed(f"{OUT}/detections{tag}.npz", det=np.array(rows, np.float32)); print("detections", len(rows), tag)
 
-def check(path, step, offset=0):
+def check(path, step, offset=0, window=0, graded=False):
     """Detections vs the ATD ball on every step-th frame (from offset) with a homography (the NOTES "Ball detector" table).
     Training tiles come from frames f % 50 == 0: score a detector trained on them with --step 50 --offset 25."""
     from eda.atd import load
     atd = load("tactical")["ball"]; H = homographies(); det = np.load(path)["det"]; det = det[det[:, 0] % step == offset]
-    fr = np.array([f for f in range(offset, len(atd), step) if np.isfinite(H[f]).all()]); seen = np.isfinite(atd[fr, 0]); by = {int(r[0]): r for r in det}
+    fr = np.array([f for f in range(offset, len(atd), step) if np.isfinite(H[f]).all() and (not window or f % 500 < window)
+                   and (not graded or any(a <= f < b for a, b in ((11185, 90652), (113742, 190198))))])   # graded play, as src/ball_fuse.py
+    seen = np.isfinite(atd[fr, 0]); by = {int(r[0]): r for r in det[::-1]}                     # top-k files: keep each frame's best
     print(f"{os.path.basename(path)}: {len(fr)} frames, ATD ball on {seen.mean():.0%}")
     for c in (0.1, 0.25, 0.4, 0.6):
         hit = np.array([f in by and by[f][3] >= c for f in fr]); err = np.array([np.hypot(*(by[f][1:3] - atd[f, :2])) for f in fr[seen & hit]])
@@ -111,5 +117,5 @@ def check(path, step, offset=0):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--extract", action="store_true"); ap.add_argument("--train", action="store_true"); ap.add_argument("--infer", action="store_true"); ap.add_argument("--check")
     ap.add_argument("--epochs", type=int, default=30); ap.add_argument("--step", type=int, default=1)
-    ap.add_argument("--up", type=float, default=1.0); ap.add_argument("--offset", type=int, default=0); ap.add_argument("--weights", default=WEIGHTS); a = ap.parse_args()
-    extract() if a.extract else train(a.epochs) if a.train else check(a.check, a.step, a.offset) if a.check else infer(a.step, a.up, a.weights)
+    ap.add_argument("--up", type=float, default=1.0); ap.add_argument("--offset", type=int, default=0); ap.add_argument("--topk", type=int, default=1); ap.add_argument("--window", type=int, default=0); ap.add_argument("--graded", action="store_true"); ap.add_argument("--weights", default=WEIGHTS); a = ap.parse_args()
+    extract() if a.extract else train(a.epochs) if a.train else check(a.check, a.step, a.offset, a.window, a.graded) if a.check else infer(a.step, a.up, a.weights, a.topk, a.window)
