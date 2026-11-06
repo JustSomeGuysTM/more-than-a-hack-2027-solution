@@ -378,6 +378,14 @@ Top-5, dense windows, graded play (624 frames), vs the ATD; old numbers (colour-
 Where it would land: the BiGRU dead-ball model reads these features directly; the team call comes from PathCRF, so for team
 it would need a blend, or use where PathCRF loses players.
 
+### BiGRU on BAR-ATH in the Docker container (2026-11-05)
+`python src/seq.py` in the pipeline container (`docker/README.md`: CPU, torch 2.5.1, the organisers' numpy 1.26.4 pins) with
+the committed `src/seq_model.pt`: public window (sanity only) **0.625 / 0.879, 15 spells, alive/dead F1 0.968**, the same as the
+2026-10-28 numbers for this model. So the container reproduces the BiGRU's dead balls at least to the score; the byte-level
+check against the submitted `seq.csv` is still checklist step 4. The run also writes `eda/out/seq_barath_logp.npy` for
+`--blend`; the blend itself needs PathCRF's team from `pod/pathcrf_setup.sh` (run `gh auth login` in the container first).
+The run took 14 min on the container's CPU. Team shape is not retrained in (see "Team shape" above: no pipeline gain).
+
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with
 `src/pathcrf_run.py --trial 200 --dfl J03WMX` (GT dead frames substituted, PathCRF team on covered alive frames):

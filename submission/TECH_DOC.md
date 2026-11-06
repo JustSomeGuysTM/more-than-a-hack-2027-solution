@@ -1,14 +1,16 @@
 # Ball possession for BAR–ATH — technical document (draft, team <team_name>)
 
-> Status 2026-11-01: GPU run finished; all numbers final except the clean-clone reproduction check and file renaming.
+> Status 2026-11-05: GPU run finished; team call switched to the soft PathCRF vote on 2026-11-04 (§2, §6); all numbers
+> final except the clean-clone reproduction check and file renaming.
 
 ## 1. Approach in one paragraph
 Two stages. (1) A per-frame model turns the tactical tracking (players, ball when visible) into
 probabilities for *home / away / dead*; (2) a Viterbi decoder with a switch penalty turns those
 into whole possession spells, because the metric (spellF1) scores possessions, not frames. On top
 of that we run **PathCRF**, a published possession-path model that predicts the ball carrier from
-player movement alone (no ball needed), and take its home/away call on alive frames while our own
-BiGRU decides when the ball is dead. Everything is trained on public data from *other* matches
+player movement alone (no ball needed). Our BiGRU alone decides when the ball is dead; on alive
+frames PathCRF's home/away call is a strong vote in a second decoding pass over the BiGRU's own team
+probabilities. Everything is trained on public data from *other* matches
 with real possession labels; nothing is tuned on the 5 public minutes of this game and no hand
 labels of this game exist anywhere in the pipeline.
 
@@ -26,12 +28,17 @@ tactical ATD (25 fps, 46 slots, ball 57% visible)
    │                          visibility & gap length, ball speed, position, team spread/speed, ±0.5 s/±2 s
    │                          context, seconds since/until last home/away touch, ball off pitch, speed jump)
    ├─ src/v2.py              HistGradientBoosting  -> log P(H/A/D) per frame -> Viterbi (switch 10)
-   ├─ src/seq.py             BiGRU (hidden 64, 30-s windows) over the same features -> Viterbi (switch 3)
+   ├─ src/seq.py             BiGRU (hidden 64, 30-s windows) over the same features -> Viterbi (switch 3); its dead balls are final
    ├─ src/pathcrf_io.py      stitch 46 slots into 11 persistent tracks per team, cut alive episodes (≥10 s)
-   └─ src/pathcrf_run.py     PathCRF home/away on alive frames + the BiGRU's dead-ball frames -> final CSV
+   ├─ src/pathcrf_run.py     PathCRF home/away per frame inside the BiGRU's alive episodes
+   └─ src/seq.py --blend     team on alive frames: Viterbi over H/A on the BiGRU's team log-prob, +4 for the team
+                              PathCRF calls on that frame -> final CSV
 ```
-Final label per frame = PathCRF team if the frame is alive and covered by an episode, else our
-model's label (H / A / D). `X` is never emitted on graded frames.
+Final label per frame: D wherever the BiGRU decodes a dead ball. On every other frame a Viterbi pass
+over home/away only (switch penalty 3, as above) scores each team by the BiGRU's log P(team | alive),
+plus 4 for the team PathCRF calls on that frame; frames PathCRF does not cover (alive stretches
+under 10 s) get no vote. A confident BiGRU can overrule PathCRF, which it does on 1.3% of the alive
+frames PathCRF covers. `X` is never emitted on graded frames.
 
 ## 3. Possession rules we implemented
 - **Dead ball (D)**: learned from DFL's `ballstatus` code (official alive/dead). DFL freezes the ball
@@ -76,6 +83,7 @@ complete) but worse on held-out DFL degraded realistically (0.42 vs 0.44 spellF1
 | own ball detector (YOLOv8n on tactical frames, labels projected from the ATD ball, no human labels) | fills ball gaps from 59% to ~78% visibility | neutral once judged honestly: a simulator of the detector's error profile on the DFL leave-one-out moves spellF1 by +0.006 at best, and reproduction would need a 2.5-h detector pass |
 | smart tagging | SET PIECES windows as dead-ball evidence | only 56% of their frames are dead; no restart moment readable |
 | PFF for the HGB / BiGRU | added 64 matches to training, first with a hand event-to-label rule, then with labels from a teacher model trained on DFL to reproduce the official labels (0.75 / 0.95 vs official) | neutral on held-out DFL (0.438 → 0.429 rule, 0.431 teacher): data volume is not the frame model's bottleneck |
+| team-shape features | per team: convex-hull area, share of the pitch it controls (nearest player on a grid), share near the ball, ±0.5 s / ±2 s means (`SPACE=1` in `src/features.py`); added to the HGB and the BiGRU | lift the BiGRU alone on held-out DFL (0.467 → 0.518) but not the pipeline (0.598 vs 0.602 with the soft team vote): PathCRF already carries the team-shape signal |
 
 ## 6. Results (held-out external matches; public 5 min reported as sanity only)
 | model | DFL leave-one-match-out spellF1 / macroF1 | public 5 min (sanity) |
@@ -95,7 +103,10 @@ complete) but worse on held-out DFL degraded realistically (0.42 vs 0.44 spellF1
 | **PathCRF ours, DFL only (7 folds, 30 epochs)** | **0.65 / 0.93** | 0.50 / 0.87 (fold-6 model) |
 | PathCRF ours, DFL + PFF (ablation fold 0, 15 epochs) | 0.64 / 0.94 (fold 0 DFL-only: 0.61 / 0.93) | 0.59 / 0.88 |
 | PathCRF ours, DFL + PFF final (trial 400, 15 epochs) + BiGRU dead balls | 0.68 / 0.95 on its DFL validation match | 0.56 / 0.86 |
-| **submitted: our PathCRF trial 401 (DFL only, authors' settings, 50 epochs) + BiGRU dead balls** | 0.71 / 0.95 on its DFL validation match | **0.66 / 0.88** |
+| our PathCRF trial 401 (DFL only, authors' settings, 50 epochs) + BiGRU dead balls, PathCRF team overrides (submitted until 2026-11-04) | 0.71 / 0.95 on its DFL validation match | 0.66 / 0.88 |
+| BiGRU dead balls + PathCRF fold models (200–206) team override, 7 DFL folds, PathCRF in official episodes | 0.59 / 0.89 | – |
+| same, soft team vote (w = 4, chosen on these folds; 2 and 4 tried) | 0.60 / 0.89 (+0.014, better on 7/7 folds) | – |
+| **submitted: PathCRF trial 401 + BiGRU dead balls + soft team vote (w = 4)** | see the two rows above | **0.66 / 0.89** |
 
 ## 7. Limitations
 - Dead-ball onsets are still ~3 s late: the tracker's ball keeps moving after the whistle and the
@@ -113,7 +124,8 @@ complete) but worse on held-out DFL degraded realistically (0.42 vs 0.44 spellF1
 git clone <public repo>; cd <repo>; python3 -m venv .venv; .venv/bin/pip install -r requirements.txt
 # unpack the data bundle into data/ as in README.md
 .venv/bin/python src/seq.py                                      # dead balls (BiGRU, weights committed) -> evaluation/results/seq.csv
-bash pod/pathcrf_setup.sh                                        # PathCRF code+patch+venv, our weights (GitHub release), inference
+bash pod/pathcrf_setup.sh                                        # PathCRF code+patch+venv, our weights (GitHub release), inference,
+                                                                 # then the soft team vote (src/seq.py --blend) -> evaluation/results/pathcrf.csv
 cp evaluation/results/pathcrf.csv submission/<team_name>.csv
 python evaluation/validate_submission.py submission/<team_name>.csv
 ```
