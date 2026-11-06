@@ -15,4 +15,4 @@ git -C $PC checkout -q 1b7c6f8 && { git -C $PC apply "$PWD/pod/pathcrf.patch" 2>
 [ -f data_raw/pathcrf/BARATH.parquet ] || .venv/bin/python src/pathcrf_io.py
 $PC/.venv/bin/python src/pathcrf_run.py --trial $TRIAL --alive evaluation/results/seq.csv
 [ -f eda/out/seq_barath_logp.npy ] || .venv/bin/python src/seq.py   # BiGRU log-probs for the blend
-.venv/bin/python src/seq.py --blend   # soft PathCRF team vote (BLEND_W) -> evaluation/results/pathcrf.csv
+.venv/bin/python src/seq.py --blend --trial $TRIAL   # soft PathCRF team vote (BLEND_W) -> evaluation/results/pathcrf.csv

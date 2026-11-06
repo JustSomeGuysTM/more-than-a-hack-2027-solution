@@ -18,7 +18,8 @@ Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and
    `cd ~/pathcrf && TRIAL=402 SOURCES="sportec pff" N_EPOCHS=30 nohup bash vast.sh full > full402.log 2>&1 &`
    (batch 64, 30 epochs = 2x trial 400's steps, ~53 h, ~$25); or the authors' exact setting `BATCH=32 N_EPOCHS=50`
    (~5 days, ~$55). Judge like 400/401: `pathcrf_run.py --trial 402 --dfl J03WR9` (val match) and the BAR-ATH public
-   window with the BiGRU dead balls; switch the candidate only if it beats 401 on both (0.707 / 0.954 and 0.660 / 0.884).
+   window with the BiGRU dead balls; switch the candidate only if it beats 401 on both (0.707 / 0.954, and 0.660 / 0.886 after
+   `src/seq.py --blend --trial 402`; steps in `plans/402_retrain.md`).
 1. **Ball detector, second attempt** (biggest open idea; all pieces exist). The first attempt filled ATD gaps
    with YOLO detections and the dead class collapsed (see "Ball fusion result"). What to try instead:
    - Retrain the detector with more data: SoccerNet Tracking 2023 (public, in the bucket under
@@ -377,6 +378,24 @@ Top-5, dense windows, graded play (624 frames), vs the ATD; old numbers (colour-
 
 Where it would land: the BiGRU dead-ball model reads these features directly; the team call comes from PathCRF, so for team
 it would need a blend, or use where PathCRF loses players.
+
+### BiGRU on BAR-ATH in the Docker container (2026-11-05)
+`python src/seq.py` in the pipeline container (`docker/README.md`: CPU, torch 2.5.1, the organisers' numpy 1.26.4 pins) with
+the committed `src/seq_model.pt`: public window (sanity only) **0.625 / 0.879, 15 spells, alive/dead F1 0.968**, the same as the
+2026-10-28 numbers for this model. So the container reproduces the BiGRU's dead balls at least to the score; the byte-level
+check against the submitted `seq.csv` is still checklist step 4. The run also writes `eda/out/seq_barath_logp.npy` for
+`--blend`; the blend itself needs PathCRF's team from `pod/pathcrf_setup.sh` (run `gh auth login` in the container first).
+The run took 14 min on the container's CPU. Team shape is not retrained in (see "Team shape" above: no pipeline gain).
+
+PathCRF in the container, same day: `src/pathcrf_io.py` (5 s), then `src/pathcrf_run.py --trial 140` (authors' checkpoint,
+CPU inference 128 s) on those BiGRU dead balls: public window **0.673 / 0.881, 27 spells**, vs **0.605 / 0.875, 26 spells**
+recorded on 2026-10-29. `src/pathcrf_io.py` is unchanged since then and the 2026-11-02 patch change only touches training, so
+the gap points at the environment (the container pins numpy 1.26.4 / pandas 2.2.3 / torch 2.5.1; the laptop's PathCRF venv
+was installed unpinned) or at the parquet being rebuilt here. Not resolved. Until the container installs the laptop's frozen
+PathCRF versions (`plans/submission_checklist.md` step 2), container PathCRF numbers are not reproductions. The soft vote on
+top changes 1.1% of PathCRF's calls and scores the same, 0.673 / 0.881.
+Blend inputs are now per trial: `src/pathcrf_run.py` writes `eda/out/pathcrf_barath_team_<trial>.npy`, and
+`src/seq.py --blend --trial N --out F` reads it, so scoring 402 no longer replaces 401's team calls (`plans/402_retrain.md` step 5).
 
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with

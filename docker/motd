@@ -5,7 +5,7 @@ One Python environment, no virtualenv: `python` is it (.venv/bin/python and ~/pa
   dfl-cache                       DFL open data -> data_raw/external/dfl_*.npz (once)
   python src/seq.py --cv          BiGRU leave-one-match-out on DFL
   python src/seq.py               BiGRU on BAR-ATH -> evaluation/results/seq.csv
-  bash pod/pathcrf_setup.sh       PathCRF on BAR-ATH (run `gh auth login` once first)
+  bash pod/pathcrf_setup.sh       PathCRF + soft team vote on BAR-ATH (run `gh auth login` once first)
 
 Long runs: start them in tmux (`tmux new -s cv`, detach with Ctrl-b d) so they survive logging out.
 More in docker/README.md.

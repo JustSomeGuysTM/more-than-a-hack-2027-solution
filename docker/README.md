@@ -74,7 +74,7 @@ numpy 1.26 (`requirements-model.txt`). You never need to call that Python yourse
 
 ```bash
 gh auth login
-bash pod/pathcrf_setup.sh       # trial 401 -> evaluation/results/pathcrf.csv
+bash pod/pathcrf_setup.sh       # PathCRF trial 401, then the soft team vote -> evaluation/results/pathcrf.csv
 ```
 
 Weights you already have on another machine can be copied in from the host instead:
