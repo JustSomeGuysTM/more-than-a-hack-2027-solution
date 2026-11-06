@@ -2,6 +2,7 @@
 
     ~/pathcrf/.venv/bin/python src/pathcrf_run.py [--trial 140] [--alive evaluation/results/seq.csv]
     -> evaluation/results/pathcrf.csv : PathCRF team on alive frames, D from --alive, X for alive frames PathCRF did not cover
+    -> eda/out/pathcrf_barath_team_<trial>.npy : PathCRF's own team per frame, for src/seq.py --blend --trial <trial>
 """
 import argparse, os, sys, time
 import numpy as np, pandas as pd, torch
@@ -19,10 +20,10 @@ def main(trial, alive_csv, out):
     print("edge_src prefixes:", micro["edge_src"].astype(str).str.split("_").str[0].value_counts().to_dict())
     team = micro["edge_src"].map(lambda s: "H" if isinstance(s, str) and s.startswith("home") else "A" if isinstance(s, str) and s.startswith("away") else None)   # out_/goal_ nodes: keep the v2 label
     fr = micro.index.values if micro.index.name == "frame_id" else tr["frame_id"].values
-    raw = np.full(F, "N", dtype=object)                               # PathCRF's own team per frame, for src/seq.py --blend
+    raw = np.full(F, "N", dtype=object)                               # PathCRF's own team per frame, for src/seq.py --blend --trial
     for f, t in zip(fr, team.values):
         if isinstance(t, str): raw[f] = t
-    os.makedirs(os.path.join(ROOT, "eda/out"), exist_ok=True); np.save(os.path.join(ROOT, "eda/out/pathcrf_barath_team.npy"), raw.astype(str))
+    os.makedirs(os.path.join(ROOT, "eda/out"), exist_ok=True); np.save(os.path.join(ROOT, f"eda/out/pathcrf_barath_team_{trial}.npy"), raw.astype(str))   # per trial: scoring 402 leaves 401's untouched
     for f, t in zip(fr, team.values):
         if isinstance(t, str) and lab[f] != "D": pc[f] = t          # NaN edge (episode not covered) keeps the v2 label
     pc = np.where(np.isin(pc, ["H", "A", "D", "X"]), pc, "X").astype(object); lab = np.where(np.isin(lab, ["H", "A", "D", "X"]), lab, "X").astype(object)

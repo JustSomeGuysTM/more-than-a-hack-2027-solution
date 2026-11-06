@@ -47,7 +47,7 @@ to 0.518 / 0.866, but not the pipeline (0.598 vs 0.602 with the soft vote), beca
 .venv/bin/python src/seq.py --cv        # leave-one-match-out on DFL, a few hours on CPU/MPS; prints spellF1 per switch
 .venv/bin/python src/seq.py --train     # fit on all 7 -> src/seq_model.pt (replaces the submitted weights)
 .venv/bin/python src/seq.py             # BAR-ATH -> evaluation/results/seq.csv + eda/out/seq_barath_logp.npy
-.venv/bin/python src/seq.py --blend     # after src/pathcrf_run.py: soft team vote -> evaluation/results/pathcrf.csv
+.venv/bin/python src/seq.py --blend     # after src/pathcrf_run.py --trial N: soft team vote (--trial N, default 401) -> evaluation/results/pathcrf.csv
 ```
 `--cv` writes `eda/out/seq_folds$TAG.npz` (`TAG` is an environment variable, empty by default). Set `TAG` for experiments
 so the cached folds are not overwritten; Eli's folds on the current code are `TAG=_base`, with team shape `_space`.

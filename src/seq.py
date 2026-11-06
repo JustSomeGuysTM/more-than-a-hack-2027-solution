@@ -5,7 +5,7 @@ from hand-made rolling features.
     .venv/bin/python src/seq.py --cv [--epochs 8]    # leave-one-match-out on DFL
     .venv/bin/python src/seq.py --train              # fit on all 7 -> src/seq_model.pt
     .venv/bin/python src/seq.py                      # BAR-ATH -> evaluation/results/seq.csv (+ log-probs for --blend)
-    .venv/bin/python src/seq.py --blend              # after src/pathcrf_run.py: soft PathCRF team vote -> evaluation/results/pathcrf.csv
+    .venv/bin/python src/seq.py --blend [--trial 401] [--out ...]   # after src/pathcrf_run.py --trial N: soft PathCRF team vote -> evaluation/results/pathcrf.csv
 """
 import argparse, os, sys
 import numpy as np
@@ -17,7 +17,8 @@ import torch, torch.nn as nn
 MODEL = os.path.join(ROOT, "src/seq_model.pt"); WIN = 750; HID = 64
 FOLDS = os.path.join(ROOT, f"eda/out/seq_folds{os.environ.get('TAG', '')}.npz"); HGB_FOLDS = os.path.join(ROOT, "eda/out/dead_folds_carry2.npz")   # eda/dead_diag.py TAG=_carry2   # 30 s windows at 25 fps
 DEV = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-BARATH_LP = os.path.join(ROOT, "eda/out/seq_barath_logp.npy"); PC_TEAM = os.path.join(ROOT, "eda/out/pathcrf_barath_team.npy")   # local only (BAR-ATH-derived)
+BARATH_LP = os.path.join(ROOT, "eda/out/seq_barath_logp.npy"); PC_TEAM = os.path.join(ROOT, "eda/out/pathcrf_barath_team_{trial}.npy")   # local only (BAR-ATH-derived); one per PathCRF trial
+TRIAL = 401   # the submitted PathCRF trial, as in src/pathcrf_run.py and pod/pathcrf_setup.sh
 BLEND_W = 4.0   # PathCRF's team vote in soft_team: DFL leave-one-out 0.602 vs 0.588 hard, better on 7/7 folds (eda/team_blend.py, 2026-11-04)
 S = dict(temp=1.0, switch=3.0, switch_d=3.0)   # DFL leave-one-out, 8 epochs (pod, 2026-10-27): switch 3 -> spellF1 0.603 / macroF1 0.914, 6 -> 0.598, 10 -> 0.590, 15 -> 0.577
 
@@ -88,10 +89,14 @@ def soft_team(lp, dead, pc, w=BLEND_W, s=S):
     e[a, :2] = lp[a, :2] - np.logaddexp(lp[a, 0], lp[a, 1])[:, None]; e[a & (pc == "H"), 0] += w; e[a & (pc == "A"), 1] += w
     p = decode(e, s).astype(object); p[~a] = "D"; return p
 
-def blend(seq_csv, out):
+def blend(seq_csv, out, trial=TRIAL):
     import pandas as pd
-    lab = pd.read_csv(seq_csv)["label"].values.astype(str); lp = np.load(BARATH_LP); pc = np.load(PC_TEAM).astype(str)
+    f = PC_TEAM.format(trial=trial)
+    if not os.path.exists(f): sys.exit(f"{f} missing: run src/pathcrf_run.py --trial {trial} first")
+    lab = pd.read_csv(seq_csv)["label"].values.astype(str); lp = np.load(BARATH_LP); pc = np.load(f).astype(str)
+    assert ((decode(lp) == "D") == (lab == "D")).all(), f"dead balls in {seq_csv} do not match {BARATH_LP}: rerun src/seq.py (default switch)"
     p = soft_team(lp, lab, pc); pd.DataFrame({"frame": np.arange(len(p)), "label": p}).to_csv(out, index=False)
+    print(f"PathCRF trial {trial} ({os.path.basename(f)})")
     gt = pd.read_csv(os.path.join(ROOT, "evaluation/gt/BAR-ATH_possession_gt_public.csv"))["label"].values
     a = lab != "D"; print("changed vs hard PathCRF on alive frames: %.3f" % (p[a & np.isin(pc, ["H", "A"])] != pc[a & np.isin(pc, ["H", "A"])]).mean())
     print("BAR-ATH public window (sanity only):", score(gt, p)); print("wrote", out)
@@ -112,6 +117,8 @@ def run_barath(out, switch=S["switch"]):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--cv", action="store_true"); ap.add_argument("--train", action="store_true"); ap.add_argument("--blend", action="store_true"); ap.add_argument("--epochs", type=int, default=8)
-    ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/seq.csv")); ap.add_argument("--switch", type=float, default=S["switch"]); a = ap.parse_args()
-    if a.blend: blend(os.path.join(ROOT, "evaluation/results/seq.csv"), os.path.join(ROOT, "evaluation/results/pathcrf.csv"))
-    else: cv(a.epochs) if a.cv else train(a.epochs) if a.train else run_barath(a.out, a.switch)
+    ap.add_argument("--out", help="default evaluation/results/seq.csv, or evaluation/results/pathcrf.csv with --blend"); ap.add_argument("--switch", type=float, default=S["switch"])
+    ap.add_argument("--trial", type=int, default=TRIAL, help="with --blend: the PathCRF trial whose team calls are blended (src/pathcrf_run.py --trial)"); a = ap.parse_args()
+    res = lambda name: os.path.join(ROOT, "evaluation/results", name)
+    if a.blend: blend(res("seq.csv"), a.out or res("pathcrf.csv"), a.trial)
+    else: cv(a.epochs) if a.cv else train(a.epochs) if a.train else run_barath(a.out or res("seq.csv"), a.switch)
