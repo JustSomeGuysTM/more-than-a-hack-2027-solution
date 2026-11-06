@@ -6,7 +6,8 @@ pip install -r requirements.txt            # this repo's .venv, data/ unpacked a
 gh auth login                              # needs access to the team repo (weights live in its GitHub release `pathcrf-weights`)
 bash pod/pathcrf_setup.sh                  # clones+patches PathCRF into ~/pathcrf, venv, weights, BAR-ATH parquet, inference
 ```
-Writes `evaluation/results/pathcrf.csv` (PathCRF home/away on alive frames, dead balls from our BiGRU) and prints the
+Writes `evaluation/results/pathcrf.csv` (PathCRF home/away on alive frames, dead balls from our BiGRU; since 2026-11-04 the
+team call is the soft blend `src/seq.py --blend`, PathCRF vote w=4, see "BiGRU and the PathCRF team blend") and prints the
 public-window sanity score. `TRIAL=140` runs the authors' checkpoint (shipped in their repo) instead of our trial 401 (the submitted model).
 Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and CV numbers are in the PathCRF section below.
 
@@ -174,6 +175,208 @@ fills ~14% of hidden frames in runs of p50 4 / p90 14 frames, errors p50 0.8 m, 
 +0.006 at best, inside fold noise. The public-window gain (0.622 -> 0.664) is not supported by the honest check, and the
 fused pipeline costs a 2.5-h detector pass for anyone reproducing the CSV. **Decision: the detector stays out of the
 submission pipeline**; the simulator stays so a better detector (SoccerNet-trained) can be judged the same way.
+
+### Ball-detector ceiling check (2026-11-03, plans/soccernet_ball_detector.md step 1)
+Same simulator with a better detector (`DET=fill,p_gross,sigma FILLS=1 TAG=_detN .venv/bin/python eda/dead_diag.py`), on the
+**current** degradation (real ATD gap structure + player dropout; the 2026-10-27 table above used the older, gentler one).
+HGB v3 leave-one-out, train and test with the same fills. "Pipeline" = that model's dead balls + PathCRF folds 200-206 for
+the team (official episodes, i.e. `full_gtep` in the QA table; the BiGRU row reproduces its 0.590).
+
+| detector (share of hidden frames filled, gross > 5 m, typical error) | HGB alone | pipeline | dead/alive acc |
+|---|---|---|---|
+| none (current) | 0.438 / 0.828 | 0.580 / 0.884 | 0.947 |
+| ours (`DET` unset: ~16%, 11%, 0.65 m) | 0.505 / 0.875 | 0.597 / 0.901 | 0.966 |
+| good (`DET=0.65,0.02,0.3`: ~50%, 2%, 0.3 m) | 0.563 / 0.900 | 0.610 / 0.910 | 0.977 |
+| great (`DET=1.5,0.02,0.3`: ~80%, 2%, 0.3 m) | 0.567 / 0.904 | 0.615 / 0.913 | 0.980 |
+| perfect (`DET=5,0,0`: 100%, 0, 0) | 0.604 / 0.914 | 0.627 / 0.920 | 0.987 |
+| BiGRU, no fills (submission) | | 0.590 / 0.890 | 0.953 |
+
+- A better ball is worth +0.02 (good) to +0.025 (great) on the pipeline over today's BiGRU, +0.037 at the ceiling. That clears
+  the plan's ~0.02 bar, just: SoccerNet training is worth doing for Phase 1, not only the innovation round.
+- Under the current degradation **even our existing detector helps** (+0.017 over the same HGB without fills, +0.007 over the
+  BiGRU). The "neutral, out of the pipeline" decision above was made on the old degradation. Not reopened here: the gain
+  is small, it costs the 2.5-h detector pass, and the BiGRU would need retraining with fills (`src/seq.py` reads `src.v2.FILLS`).
+- Caveats: simulated detector (errors independent of game state; a real one fails in crowds and at the far side, exactly
+  near stoppages); PathCRF in official episodes is optimistic; HGB, not the BiGRU, made the dead balls.
+- Leak to avoid: an earlier version left dead frames unfilled ("the detector is off when the ball is dead"); a still-missing
+  ball then means dead, and the scores jumped. Fills now land on dead frames too.
+
+### SoccerNet ball data, day one (2026-11-03, `src/soccernet.py`)
+- Format confirmed: MOT `gt/gt.txt` (frame, track, x, y, w, h, ...), ball track named `ball;1` in `gameinfo.ini`. Train
+  split: 57 clips x 750 frames, 40,931 ball boxes, ball labelled on 94% of frames (clip p10 81%).
+- **Domain gap:** SoccerNet ball box sqrt(w*h) p5/50/95 = 8 / 14 / 23 px (zoomed broadcast). Ours on the tactical feed,
+  0.22 m through the homography at our detector's confident hits: 3 / 4.2 / 7 px. A ~3.3x scale difference.
+- **Zero-shot baseline** (stock COCO `yolov8n.pt`, class 32, top-1 per frame, 5 clips x 50 frames, hit = within max(8 px, box)):
+
+| frames | recall | wrong or no-ball top-1 |
+|---|---|---|
+| SoccerNet as is | 0.58 | 44% |
+| shrunk to our ball size (x0.3) | 0.18 | 10% |
+| shrunk x0.3, then upsampled x2.2 by YOLO | 0.53 | 33% |
+
+- The ball survives the shrink; the network's stride loses it. So: **run our detector on upsampled tiles** (2-3x; about
+  6x the tiles, so a few hours for the full match on MPS) and train on SoccerNet frames shrunk to our size then upsampled
+  the same way. Upsampling is cheap to test with our existing weights first.
+- Caveat: a shrunk broadcast frame is sharper than our wide camera (different lens, compression, motion blur); the real
+  test is on our feed against the ATD.
+
+### Upsampled tiles on our feed: negative (2026-11-03)
+`src/ball_detect.py --infer --up 2` (frame upsampled 2x, 8x4 tiles of 640 instead of 4x2), every 5th frame of BAR-ATH
+(2 h 20 min on MPS); stock COCO yolov8n at x1 and x2 on every 50th frame. Scored with `--check <file> --step 50` against the
+ATD ball (3,987 frames with a homography, ATD ball on 57%; includes warm-up and stoppages, so absolute numbers are worse
+than the 2026-10-27 table, which used alive frames only):
+
+| top-1 detector, conf 0.25 | detects on ATD-ball frames | median error vs ATD | > 5 m off | detects on ATD-missing frames |
+|---|---|---|---|---|
+| ours, native (`detections.npz`) | 89% | 1.3 m | 28% | 38% |
+| ours, x2 | 99% | 16.5 m | 69% | 95% |
+| COCO, native | 68% | 13.0 m | 58% | 42% |
+| COCO, x2 | 93% | 14.5 m | 59% | 77% |
+
+- Upsampling **hurts** our detector. Pixel positions map back correctly (identical to native where both find the ball);
+  with 4x the tiles, the top-1 box is more often a confident false positive: a player's head, a line, a spare ball in
+  the warm-up. The model was trained on native tiles (ball ~4 px) and never saw an 8 px ball or that many negatives.
+- Stock COCO is not a usable baseline on our feed at either scale (median error 13-15 m). The SoccerNet result (shrink then
+  upsample recovers recall) does not transfer as-is: our frames are blurrier and the false-positive load is far higher.
+- So the next detector has to be **trained** at the inference scale with many hard negatives: SoccerNet frames shrunk to
+  our ball size (x0.3) then upsampled x2, ball-free tiles from our feed (allowed: no labels involved), and judged on
+  top-1 precision, not recall. Plus the temporal layer (plan step 4), since per-frame top-1 is where it fails.
+- Detections stay local (`eda/out/ball/detections_*`); they are derived from BAR-ATH.
+
+### Detector trained at the x2 scale: better than x2 with old weights, still worse than native (2026-11-03)
+`src/soccernet.py --build` (SoccerNet frames shrunk so the ball has our native size 3-7 px, blurred sigma 0.3-0.8, upsampled
+x2 like inference; one ball + one ball-free tile per 5th frame; 47 train / 10 held-out clips) + our ATD tiles from
+`data_raw/ball` upsampled x2: 8,671 ball / 7,857 empty train tiles. `--train`: YOLOv8n from COCO, 25 epochs, 3.4 h on MPS.
+Held-out tiles (SoccerNet + ours): P 0.59, R 0.51, mAP50 0.43. Weights `src/ball_yolov8n_up2.pt` (gitignored, bucket
+`derived/ball_yolov8n_up2.pt`: it saw our match's tiles). On our feed, every 50th frame **offset 25** (never a training tile;
+`--check ... --step 50 --offset 25`):
+
+| top-1, conf 0.25 | detects on ATD-ball frames | median error vs ATD | > 5 m off | detects on ATD-missing frames |
+|---|---|---|---|---|
+| native, current weights | 90% | 1.4 m | 29% | 38% |
+| x2, current weights | 100% | 17.0 m | 70% | 96% |
+| **x2, new weights** | 81% | 2.4 m | 42% | 42% |
+
+- Training at the scale fixes most of the x2 collapse, but it does not beat the native detector, so it does not
+  replace it. Gross errors (42% > 5 m) are what the dead-ball model cannot afford (ceiling check: "good" means 2%).
+- Caveat in the native model's favour: it was trained only on ATD-projected labels, so it shares the ATD's choices (e.g.
+  which ball in the warm-up); agreement with the ATD is not the same as being right.
+- Not tried, in order of promise: (1) SoccerNet at **native** scale added to the current native set (no upsampling, same
+  tiles at inference); (2) the temporal layer on top-k candidates (plan step 4): per-frame top-1 is where every
+  variant fails, and a smooth-track filter is what turned 42% gross into 12% for `ball_fuse.support`.
+
+### Temporal layer on top-k candidates (2026-11-03, `src/ball_track.py`)
+Viterbi over each frame's top-5 detections plus a "no ball" state: smooth motion is cheap (Gaussian on the step, hard cap
+1.6 m/frame = 40 m/s), switching the track on/off costs 4, tracks shorter than 5 frames are dropped. Self-test on a
+synthetic track with confident one-frame false positives. Candidates: current native weights, `--topk 5 --window 100`
+(dense stretches f % 500 < 100, ~20% of the match). Scored on frames f % 50 == 25 (never training tiles).
+
+**Score on graded play only** (`--graded`; ball_fuse's graded ranges). Outside it (warm-up, half-time) several balls are on
+the pitch and the ATD follows one: 77% of tracked frames there are "> 5 m off", which dominated the earlier tables.
+
+| graded play, 624 frames | detects on ATD-ball frames | median error | > 5 m off | detects on ATD-missing frames |
+|---|---|---|---|---|
+| top-1, conf 0.25 | 87% | 0.9 m | 15% | 49% |
+| top-1, conf 0.6 | 48% | 0.7 m | 11% | 14% |
+| **tracked** | 87% | 0.9 m | 12% | 41% |
+| x2 weights, top-1 conf 0.25 (every 50th +25, 3,118 frames) | 77% | 1.4 m | 30% | 49% |
+
+- The tracker keeps conf-0.25 coverage at about conf-0.6 precision. Remaining gross errors: in 81% of them no top-5 candidate is
+  within 2 m of the ATD, so the detector never saw that ball (or the ATD is wrong); smoothing cannot fix those.
+- Parameter sweep (on / none / min_len / sigma, chosen on even windows, reported on odd): the pick did not transfer
+  (10% -> 14% gross); defaults kept. Lower gross (6%) costs coverage (62-68%).
+- **Worth on DFL:** that profile in the simulator (`DET=0.5,0.12,0.75`: ~40% of hidden frames, 12% gross, 0.9 m) gives
+  pipeline **0.603 / 0.905** vs 0.590 / 0.890 with today's BiGRU (+0.013) and 0.597 for the untracked detector. Real, small; the
+  "good detector" (0.610) needs gross errors near 2%. Not adopted: needs a full-match top-k pass (~2.5 h + decode) and a
+  BiGRU retrain with fills, for +0.01 inside fold noise.
+
+### SoccerNet at native scale: the model barely fires on our feed (2026-11-04)
+`src/soccernet.py --build --up 1` / `--train --up 1`: SoccerNet frames shrunk to our ball size (no upsampling) + our ATD tiles,
+YOLOv8n from COCO, 25 epochs (3.5 h). Held-out tiles: P 0.60, R 0.49, mAP50 0.43. Weights bucket `derived/ball_yolov8n_sn.pt`.
+On our feed (top-5, dense windows, graded play): detects on only **10%** of ATD-ball frames at conf 0.25 (current weights 87%),
+3% at 0.4; tracked 5%. When it fires it is right (0.8 m median), but it is far too unsure on our frames.
+Likely cause (untested): label boxes. This set labels the ~4 px ball with a 6 px box (SoccerNet boxes scaled the same way);
+the current weights were trained with 20 px boxes around the same ball, which gives the stride-8 head context. Next
+if anyone continues: rebuild with 20 px boxes at native scale, or fine-tune the current weights on SoccerNet instead of
+training from COCO.
+
+### Colour-order bug in `ball_detect.infer` (fixed 2026-11-04)
+ffmpeg decodes rgb24 and `infer` passed those arrays straight to ultralytics, which treats arrays as BGR (and reads the training
+jpgs as BGR). So every detection pass so far ran colour-swapped. On SoccerNet (clip SNMOT-062, 30 frames at our ball size, our
+weights) the ball is among the candidates on 11/30 frames swapped vs **21/30** in the right order. Fixed with one line; the old
+top-5 files are kept as `eda/out/ball/*_rgb.npz` so the tables above stay reproducible. Every detector number above (87% / 0.9 m /
+12% gross) was measured with the swap: reruns with the fix are in progress. The submission never reads detector output
+(`v2.py --source tactical` default), so it is unaffected.
+
+### Learned candidate scorer (`src/ball_scorer.py`, 2026-11-04)
+The "learned version" of plan step 4. Our weights (now in BGR) on every frame of all 57 SoccerNet clips shrunk to our ball size
+(4.2 px), CPU, top-5 merged as `infer` (26,934 candidates). Per frame and slot: present, conf, and for frames t-2, t-1, t+1, t+2 the
+distance to the nearest candidate (capped 40 px) and its conf. A 2-layer BiGRU (hidden 48) picks a slot or "none"; label = slot
+within max(3 px, ball size) of the human box. 47 clips train, last 10 held out (as `soccernet.VAL_CLIPS`), 60 epochs of random
+8 s windows. Pixel space on purpose, so it transfers to our feed (columns u, v of the detection files; both 25 fps).
+
+| held-out SoccerNet, 2,347 frames with the ball among the candidates | picked right | wrong picks |
+|---|---|---|
+| top-1 at conf 0.25 | 71% | 617 |
+| **GRU scorer (p >= 0.5)** | **75%** | **456** |
+
+Modest, and noisy across epochs (62-75%). Not yet run on our feed: needs the BGR top-5 rerun (`--ours <file>` scores it next to
+the Viterbi tracker on the same frames). Ideas for whoever picks it up: add player context (distance to the nearest player), more
+neighbour frames, train on candidates from whichever detector wins.
+
+### Team shape: convex hull and Voronoi share (`src/features.py`, `SPACE=1`, 2026-11-04)
+Idea from Elijah's Big Data Bowl 2022 work (penalised expected arrival time / space control). Per team: convex-hull area,
+share of the pitch it controls (Voronoi = nearest player, on a 21x14 grid), share of the grid within 15 m of the ball; plus ±0.5 s
+and ±2 s rolling means. 12 s per match. Behind a flag so the default features (and the BiGRU) are unchanged.
+Metrica match 1 (degraded ball), AUC separating H from A possession frames: **hull difference 0.775**, Voronoi 0.664, near-ball
+share 0.621; current best team feature `ddiff` 0.685. The team in possession spreads out, and the hull needs no ball (missing
+on 43% of our frames). DFL leave-one-out (HGB, `SPACE=1 TAG=_space eda/dead_diag.py`, same code and degradation as `_det0`):
+
+| DFL 7 folds, HGB | spellF1 / macroF1, own dead balls | with GT dead balls (oracle D) | false D runs |
+|---|---|---|---|
+| `_det0` baseline | 0.438 / 0.828 | 0.474 / 0.869 | 56 |
+| **+ team shape (`SPACE=1`)** | **0.486 / 0.856** | **0.528 / 0.897** | 52 |
+
++0.048 spellF1. Most of it is the team call (the oracle-D row gains as much); dead-ball detection is about unchanged (missed
+stoppages 36 -> 39, false runs 56 -> 52). Biggest single feature gain since the since/until features. Next: BiGRU retrain with
+`SPACE=1` (Brandon), and a PathCRF + HGB/BiGRU team blend, since PathCRF supplies the submission's team call.
+
+**BiGRU and the PathCRF team blend** (`eda/team_blend.py`, 2026-11-04). The submission is BiGRU dead balls + PathCRF team, so
+these rows decide. BiGRU folds rerun on current code (`TAG=_base`; the Oct 28 cache gives the same 0.590 hard).
+*Hard* = today: PathCRF's team wherever it covers the frame. *Soft w* = dead balls exactly as the BiGRU decodes them; on its
+alive frames a Viterbi over H/A only, with the BiGRU's team log-prob plus a bonus w for PathCRF's team, so a confident BiGRU can
+overrule PathCRF. (A first soft version also let the bonus raise "alive": PathCRF's DFL outputs only cover truly alive frames,
+so that leaked the true dead balls and scored 0.621, rising with w. Discarded.)
+
+| DFL 7 folds, spellF1 / macroF1 | BiGRU alone | hard (today) | soft w=2 | soft w=4 |
+|---|---|---|---|---|
+| BiGRU | 0.467 / 0.841 | 0.588 / 0.890 | 0.597 / 0.890 | **0.602 / 0.891** |
+| BiGRU + team shape (`SPACE=1`) | 0.518 / 0.866 | 0.585 / 0.888 | 0.601 / 0.890 | 0.598 / 0.889 |
+
+Per fold vs today (hard, plain BiGRU): **soft w=4, plain BiGRU: +0.014, better on 7/7 folds** (+0.007 to +0.018). Team shape
+lifts the BiGRU alone by +0.051, but with PathCRF on team it adds nothing under hard (-0.003, 2/7) and about +0.01 under soft:
+PathCRF already captures the shape signal, and the features don't improve the dead-ball calls. w picked on the same folds (only
+2 and 4 tried; both positive). Adopting soft w=4 is a decode change only (BiGRU log-probs + PathCRF labels, no retraining).
+**Adopted 2026-11-04** (`src/seq.py --blend`, `BLEND_W = 4`, last step of `pod/pathcrf_setup.sh`; same `soft_team` function as
+the CV). Before switching, `seq.csv` and the hard `pathcrf.csv` both reproduced byte-identical. BAR-ATH: 1,147 of 199,319 frames
+change (team only, dead balls identical; 1.3% of PathCRF-covered alive frames); public window (sanity only) 0.660 / 0.886 vs
+0.660 / 0.884 hard. `validate_submission.py`: valid.
+
+### Detector reruns with the colour fix (2026-11-04)
+Top-5, dense windows, graded play (624 frames), vs the ATD; old numbers (colour-swapped) in brackets.
+
+| detector | top-1 conf 0.25: detects / >5 m off | tracked (Viterbi): detects / >5 m off | detects on ATD-missing (tracked) |
+|---|---|---|---|
+| current weights, BGR fix | 89% / 13% (87% / 15%) | **88% / 10%** (87% / 12%) | 46% (41%) |
+| SoccerNet 20 px boxes, fine-tuned from ours (`sn20ft`) | 91% / 16% | 89% / 12% | 52% |
+| GRU scorer (`ball_scorer.py`) on current BGR candidates, p >= 0.5 | | 80% / 11% (p 0.3: 85% / 13%) | 46% |
+
+- Colour fix: a small real gain (gross 12% -> 10% tracked). The fine-tune fires on more frames the ATD misses (52% vs 46%), which
+  can't be checked against the ATD, but on checkable frames it is no more accurate: not adopted. Weights `src/ball_yolov8n_sn20ft.pt`.
+- The SoccerNet-trained scorer does not beat the hand-set Viterbi on our feed at any threshold: negative transfer. Parked.
+
+Where it would land: the BiGRU dead-ball model reads these features directly; the team call comes from PathCRF, so for team
+it would need a blend, or use where PathCRF loses players.
 
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with

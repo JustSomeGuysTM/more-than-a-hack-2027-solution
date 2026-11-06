@@ -19,6 +19,10 @@ def main(trial, alive_csv, out):
     print("edge_src prefixes:", micro["edge_src"].astype(str).str.split("_").str[0].value_counts().to_dict())
     team = micro["edge_src"].map(lambda s: "H" if isinstance(s, str) and s.startswith("home") else "A" if isinstance(s, str) and s.startswith("away") else None)   # out_/goal_ nodes: keep the v2 label
     fr = micro.index.values if micro.index.name == "frame_id" else tr["frame_id"].values
+    raw = np.full(F, "N", dtype=object)                               # PathCRF's own team per frame, for src/seq.py --blend
+    for f, t in zip(fr, team.values):
+        if isinstance(t, str): raw[f] = t
+    os.makedirs(os.path.join(ROOT, "eda/out"), exist_ok=True); np.save(os.path.join(ROOT, "eda/out/pathcrf_barath_team.npy"), raw.astype(str))
     for f, t in zip(fr, team.values):
         if isinstance(t, str) and lab[f] != "D": pc[f] = t          # NaN edge (episode not covered) keeps the v2 label
     pc = np.where(np.isin(pc, ["H", "A", "D", "X"]), pc, "X").astype(object); lab = np.where(np.isin(lab, ["H", "A", "D", "X"]), lab, "X").astype(object)
@@ -65,4 +69,4 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--trial", type=int, default=401); ap.add_argument("--alive", default=os.path.join(ROOT, "evaluation/results/seq.csv")); ap.add_argument("--out", default=os.path.join(ROOT, "evaluation/results/pathcrf.csv")); ap.add_argument("--pff", help="score the checkpoint on this PFF game id instead"); ap.add_argument("--dfl", help="score the checkpoint on this DFL match id (held-out fold) instead")
     ap.add_argument("--save", action="store_true", help="with --dfl/--pff: also write the per-frame PathCRF team to eda/out/qa/ (eda/qa.py)")
     ap.add_argument("--oof", action="store_true", help="with --dfl: episodes from the BiGRU out-of-fold dead balls, not the official ball status (eda/qa.py 'full')")
-    a = ap.parse_args(); score_external(a.trial, a.pff, save=a.save) if a.pff else score_external(a.trial, a.dfl, dfl=True, save=a.save, oof=a.oof) if a.dfl else main(a.trial, a.alive, a.out)
+    a = ap.parse_args(); score_external(a.trial, a.pff, save=a.save) if a.pff else score_external(a.trial, a.dfl, dfl=True, save=a.save, oof=a.oof) if a.dfl else main(a.trial, os.path.join(ROOT, a.alive), os.path.join(ROOT, a.out))   # paths relative to the repo (cwd is ~/pathcrf)

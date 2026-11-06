@@ -36,11 +36,22 @@ small, this is the innovation-round piece: a clean, documented use of public hum
 
 ## Steps
 
-1. **Ceiling check** (CPU, about an hour; do this first). Run the DFL leave-one-out with `FILLS=1`
+1. **Ceiling check — done 2026-11-03** (NOTES "Ball-detector ceiling check"): +0.02 (good detector) to +0.025 (80% fills)
+   on the DFL pipeline, +0.037 for a perfect ball. Worth doing for Phase 1; go to step 2. Original description: Run the DFL leave-one-out with `FILLS=1`
    (`eda/dead_diag.py`), but give `simulate_detector` the parameters of a good detector instead of ours: fill 50% and 80%
    of hidden-ball frames, 2% gross errors, no fills during dead stretches. Compare with the 0.532 / 0.893 baseline. If
    even the 80% case gains less than ~0.02, steps 3-5 are for the innovation round only.
-2. **Data** (laptop).
+2. **Data** (laptop). **Day one done 2026-11-03** (NOTES "SoccerNet ball data, day one", `src/soccernet.py`): format
+   confirmed, ball is ~3.3x smaller on our feed, zero-shot COCO recall 0.58 native / 0.18 at our size / 0.53 when upsampled
+   x2.2. **Upsampled tiles on our feed tried 2026-11-03: negative** (NOTES "Upsampled tiles on our feed"): our weights at x2
+   go from 1.3 m to 16.5 m median error (false positives win the top-1); stock COCO is unusable on our feed. Next: train at
+   the inference scale (SoccerNet x0.3 then x2, plus ball-free tiles from our feed as negatives), judge top-1 precision,
+   and add the temporal layer (step 4). Tools: `src/ball_detect.py --infer --up 2 --weights <pt>` and `--check`.
+   **Trained at x2, 2026-11-03** (`src/soccernet.py --build/--train`, NOTES "Detector trained at the x2 scale"): 2.4 m median /
+   42% gross vs native's 1.4 m / 29% on held-out frames, so it does not replace the native detector. Next: SoccerNet at native
+   scale added to the native set, then the temporal layer (step 4).
+   **Native scale tried 2026-11-04: negative** (NOTES "SoccerNet at native scale"): barely fires on our feed (10% vs 87%).
+   Next: 20 px label boxes as in `src/ball_detect.py`, or fine-tune the current weights on SoccerNet.
    - `aws s3 cp s3://more-than-a-hack-2027/external/soccernet/SN-Tracking-2023/train.zip . --profile mtah`; unzip
      outside the repo.
    - Pull the ball boxes per clip from `gt.txt`, using the `gameinfo.ini` id of the ball. Count frames with a ball box
@@ -53,10 +64,13 @@ small, this is the innovation-round piece: a clean, documented use of public hum
    neighbouring frames are near-duplicates) plus our ATD-projected tiles. Hold out ~10 SoccerNet clips for honest
    precision, recall and localisation error. YOLOv8n trains on a laptop (MPS) or Colab; no rented GPU needed.
 4. **Temporal layer — where a GRU fits.** Detection stays per frame; the gain comes from linking frames.
+   **Viterbi version done 2026-11-03** (`src/ball_track.py`, NOTES "Temporal layer"): graded-play gross errors 15% -> 12% at
+   the same coverage; worth ~+0.013 on the DFL pipeline. The learned GRU scorer below is the next step if anyone continues.
    - Keep the top-k candidates per frame at low confidence, not just the best one.
    - Link them through time with a constant-velocity Kalman filter and a Viterbi (or multiple-hypothesis) search over
      candidates. The ball moves smoothly except at touches and rarely exceeds ~40 m/s. This replaces
      `ball_fuse.support`.
+   - (2026-11-04: first version in `src/ball_scorer.py`, 75% vs 71% right picks on held-out SoccerNet; see NOTES.)
    - Learned version: a small GRU over each candidate sequence (position, confidence, speed, distance to the nearest
      player) that scores "this candidate is the ball", trained on SoccerNet clips where the truth is known.
    - If YOLO's recall on tiny balls stays poor: a TrackNet-style heatmap network fed 3 stacked consecutive frames (the

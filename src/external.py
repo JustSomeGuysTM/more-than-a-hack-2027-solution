@@ -78,7 +78,8 @@ def simulate_detector(d, seed=0, fill=0.18, run_mean=7, p_gross=0.11, sigma=0.65
     missing graded frames in runs of median 3 / p90 20 frames; accepted detections are 0.77 m off at the median and >5 m
     off 11% of the time, in runs of ~3 frames (eda/NOTES.md 2026-10-27). Reproduce that on a degraded DFL ball so fused-ball
     pipelines can be judged on DFL leave-one-out instead of the public window. Call after degrade_ball; d must still carry
-    the true ball as d["ball_true"]."""
+    the true ball as d["ball_true"]. Other settings model a better detector (plans/soccernet_ball_detector.md step 1).
+    Fills land on dead frames too: sparing them leaks the label (a still-missing ball then means dead)."""
     r = np.random.default_rng(seed + 7); out = dict(d); b = d["ball"].copy(); t = d["ball_true"]; hidden = ~np.isfinite(b[:, 0]) & np.isfinite(t[:, 0]); F = len(b)
     starts = hidden & (r.random(F) < fill / run_mean)
     for s in np.where(starts)[0]:
