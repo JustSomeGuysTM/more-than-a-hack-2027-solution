@@ -548,7 +548,10 @@ or `X` (abstain). Scored on the private full-match truth; we only see the first 
 | videos | tactical 199,319 f; broadcast 164,488 f; ~13 GB | downloading into `data_raw/` |
 
 Graded frames: 11185–90651 (1st half) and 110808–190197 (2nd half). 2nd half kicks off at
-113742 — the 2,934 frames before that are graded and all `D`.
+113742 — the 2,934 frames before that are graded and all `D`. Both kick-offs are the organisers' published numbers
+(`games.half_video_blocks`, FAQ.md), defined once in `src/possession.play_windows` (2026-11-08; before that, copies in
+seven files). Rerun in the container after the change: `seq.csv`, `seq_barath_logp.npy` and `BARATH.parquet` are
+byte-identical to the ones before it.
 
 ## What the public 5 minutes shows (`eda/out/timeline_public.png`)
 - 21 segments / 17 possessions, mean 14 s, but possessions as short as **0.76 s and 1.3 s** exist

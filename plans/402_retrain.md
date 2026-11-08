@@ -139,7 +139,7 @@ The evidence is also weaker than it reads:
    The DFL clips (`eda/qa.py dfl`, `bash eda/qa_batch.sh`) come from the leave-one-out folds 200-206, not from 402, so
    they only change if new folds are trained. If 402 is adopted, also replace `s3://more-than-a-hack-2027/qa_barath/barath_changes.mp4`.
 8. **If adopted**: upload `402.tgz` to the `pathcrf-weights` release; set the default trial to 402 in `src/pathcrf_run.py`,
-   `pod/pathcrf_setup.sh` and `src/seq.py` (`TRIAL`); update TECH_DOC §4 and §6; tell Brandon. Destroy the box either way.
+   `pod/pathcrf_setup.sh` and `src/seq.py` (`TRIAL`); update the Training data and Results sections of TECH_DOC; tell Brandon. Destroy the box either way.
 
 ## If there is budget for a second run
 

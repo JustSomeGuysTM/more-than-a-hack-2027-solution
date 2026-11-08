@@ -11,7 +11,7 @@ import argparse, os, sys
 import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from src.features import features
-from src.possession import viterbi, score, LAB, min_dead
+from src.possession import viterbi, score, LAB, min_dead, in_play
 from src.v2 import IDS, dfl_game, mirror
 import torch, torch.nn as nn
 MODEL = os.path.join(ROOT, "src/seq_model.pt"); WIN = 750; HID = 64
@@ -109,7 +109,7 @@ def run_barath(out, switch=S["switch"]):
     import pandas as pd; from eda.atd import load; from games import GAMES, GAME
     m = torch.load(MODEL, map_location="cpu"); d = load("tactical"); d["fps"] = 25; F = len(d["ball"])
     X, names = features(d, GAMES[GAME]["pitch"]); assert names == m["names"]; net = Net(len(names)).to(DEV); net.load_state_dict(m["state"])
-    lp = logp(net, X); alive = np.zeros(F, bool); alive[11185:90652] = True; alive[113742:190198] = True; lp[~alive, :2] = -20
+    lp = logp(net, X); lp[~in_play(F), :2] = -20   # outside play is dead by definition (src/possession.play_windows)
     os.makedirs(os.path.dirname(BARATH_LP), exist_ok=True); np.save(BARATH_LP, lp)
     lab = decode(lp, dict(S, switch=switch, switch_d=switch)); pd.DataFrame({"frame": np.arange(F), "label": lab}).to_csv(out, index=False)
     gt = pd.read_csv(os.path.join(ROOT, "evaluation/gt/BAR-ATH_possession_gt_public.csv"))["label"].values

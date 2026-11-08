@@ -10,12 +10,12 @@
    same file. On the training laptop:
    - `~/mtah2027/.venv/bin/pip freeze > requirements-solution.txt`
    - `~/pathcrf/.venv/bin/pip freeze > pod/requirements-pathcrf.txt`
-   - make `pod/pathcrf_setup.sh` install the pinned PathCRF file, point TECH_DOC §8 at `requirements-solution.txt`, and
+   - make `pod/pathcrf_setup.sh` install the pinned PathCRF file, point the Reproduction section of TECH_DOC at `requirements-solution.txt`, and
      record the Python version.
 3. **Weights must download for a stranger.** `pathcrf_setup.sh` fetches weights with `gh release download` from the team
    repo, which is private and needs a GitHub login. The organisers must be able to fetch them: put the release on the
    public repo and download with plain `curl` from the release URL.
-4. **Clean-clone reproduction.** Fresh clone in a new folder, data bundle unpacked, follow TECH_DOC §8 to the letter,
+4. **Clean-clone reproduction.** Fresh clone in a new folder, data bundle unpacked, follow the Reproduction section of TECH_DOC to the letter,
    then `cmp` the result against the CSV being submitted. It must be byte-identical. If it is not, diff the labels to see
    where they differ before changing anything.
 5. **Validate**: `python evaluation/validate_submission.py <team_name>.csv` on the exact file being uploaded.

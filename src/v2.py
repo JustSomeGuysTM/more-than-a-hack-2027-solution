@@ -12,7 +12,7 @@ import argparse, os, pickle, sys
 import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from src.features import features
-from src.possession import viterbi, score, LAB, min_dead
+from src.possession import viterbi, score, LAB, min_dead, in_play
 from src.external import degrade_ball, degrade_ball_geom, degrade_players, dead_ball_carry, simulate_detector
 IDS = ["J03WMX", "J03WN1", "J03WOH", "J03WOY", "J03WPY", "J03WQQ", "J03WR9"]
 MODEL = os.path.join(ROOT, "src/v2_model.pkl")
@@ -78,7 +78,7 @@ def run_barath(out, source="tactical"):
     m = pickle.load(open(MODEL, "rb")); d = load(source); d["fps"] = 25; F = len(d["ball"])
     X, names = features(d, GAMES[GAME]["pitch"]); assert names == m["names"]
     logp = np.log(m["clf"].predict_proba(X).clip(1e-4, 1))
-    alive = np.zeros(F, bool); alive[11185:90652] = True; alive[113742:190198] = True; logp[~alive, :2] = -20   # outside the halves is dead by definition
+    logp[~in_play(F), :2] = -20   # outside play is dead by definition (src/possession.play_windows)
     lab = decode(logp); pd.DataFrame({"frame": np.arange(F), "label": lab}).to_csv(out, index=False)
     gt = pd.read_csv(os.path.join(ROOT, "evaluation/gt/BAR-ATH_possession_gt_public.csv"))["label"].values
     print("BAR-ATH public window (sanity only):", score(gt, lab)); print("wrote", out)

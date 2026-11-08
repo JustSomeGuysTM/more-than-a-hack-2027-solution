@@ -9,6 +9,7 @@ alone or jumps, so it has to pay to switch the track on and off.
 import argparse, os, sys
 import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
+from src.possession import play_windows
 P = dict(sigma=1.0, move=0.6, vmax=1.6, jump=8.0, on=4.0, off=4.0, none=1.5, min_len=5)   # detector noise m, typical ball move m/frame, max m/frame (40 m/s); costs in -log units
 
 def track(det, p=P):
@@ -33,7 +34,7 @@ def track(det, p=P):
                 for t in range(a0, a1): out[int(run[t])] = tuple(C[t][path[t], 1:4])
     return out
 
-GRADED = ((11185, 90652), (113742, 190198))   # graded play (src/ball_fuse.py); outside it, warm-up balls make the ATD a poor reference
+GRADED = tuple(play_windows())   # play (src/ball_fuse.py); outside it, warm-up balls make the ATD a poor reference
 
 def score(out, step=50, offset=25, window=100, graded=True):
     """Same frames and metric as `src/ball_detect.py --check --step 50 --offset 25 --window 100 [--graded]`."""
