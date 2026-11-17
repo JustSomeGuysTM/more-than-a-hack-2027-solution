@@ -2,7 +2,8 @@
 
 One Docker image with everything the possession pipeline needs, and an SSH server so you can log in and run models
 the same way on a laptop, a desktop or a rented box. It replaces both virtualenvs: this repo's `.venv` and PathCRF's
-`~/pathcrf/.venv`. Inside there is one Python 3.11 environment, and `python` is it.
+`~/pathcrf/.venv`. Inside there is one Python 3.11 environment, and `python` is it. Without Docker, `bash pod/venv_setup.sh`
+builds the same environment as one virtualenv in `.venv` (same pinned versions, CPU torch) and points `~/pathcrf/.venv` at it.
 
 The repo is not copied into the image. It is mounted at `/workspace`, so edits on your machine show up in the
 container straight away, and results the container writes (`evaluation/results/`, `eda/out/`, `data_raw/`) land in

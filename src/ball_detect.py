@@ -18,6 +18,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from games import asset_paths, GAMES, GAME
+from src.possession import play_windows
 L, W = GAMES[GAME]["pitch"]; VW, VH = 1920, 1080; T = 640; BOX = 20; SNAP = 30; STEP = 50
 DATA = os.path.join(ROOT, "data_raw/ball"); OUT = os.path.join(ROOT, "eda/out/ball"); WEIGHTS = os.path.join(ROOT, "src/ball_yolov8n.pt")
 
@@ -108,7 +109,7 @@ def check(path, step, offset=0, window=0, graded=False):
     from eda.atd import load
     atd = load("tactical")["ball"]; H = homographies(); det = np.load(path)["det"]; det = det[det[:, 0] % step == offset]
     fr = np.array([f for f in range(offset, len(atd), step) if np.isfinite(H[f]).all() and (not window or f % 500 < window)
-                   and (not graded or any(a <= f < b for a, b in ((11185, 90652), (113742, 190198))))])   # graded play, as src/ball_fuse.py
+                   and (not graded or any(a <= f < b for a, b in play_windows()))])   # graded play, as src/ball_fuse.py
     seen = np.isfinite(atd[fr, 0]); by = {int(r[0]): r for r in det[::-1]}                     # top-k files: keep each frame's best
     print(f"{os.path.basename(path)}: {len(fr)} frames, ATD ball on {seen.mean():.0%}")
     for c in (0.1, 0.25, 0.4, 0.6):

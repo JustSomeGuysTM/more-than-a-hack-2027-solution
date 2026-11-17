@@ -7,6 +7,7 @@ import argparse, os, sys
 import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from eda.atd import load
+from src.possession import in_play
 CONF = 0.5; SUP = 10; W = 5; OUT = os.path.join(ROOT, "eda/atd_tactical_fused.npz")
 
 def support(det, F, w=W):
@@ -23,7 +24,7 @@ def fuse(det_path):
     d = load("tactical"); det = np.load(det_path)["det"]; ball = d["ball"].copy(); src = np.where(np.isfinite(ball[:, 0]), 1, 0).astype(np.int8)
     ok = (det[:, 3] >= CONF) & (support(det, len(ball)) >= SUP); f = det[ok, 0].astype(int); missing = ~np.isfinite(ball[f, 0])
     ball[f[missing], :2] = det[ok][missing, 1:3]; src[f[missing]] = 2
-    alive = np.zeros(len(ball), bool); alive[11185:90652] = True; alive[113742:190198] = True
+    alive = in_play(len(ball))
     print("graded-frame ball visibility: ATD %.3f -> fused %.3f (detector filled %d frames)" % ((src[alive] == 1).mean(), (src[alive] > 0).mean(), (src[alive] == 2).sum()))
     return {"players": d["players"], "ball": ball, "team": d["team"], "ball_src": src}
 

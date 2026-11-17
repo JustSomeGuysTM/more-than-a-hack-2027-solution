@@ -12,9 +12,9 @@ import argparse, os, sys
 import numpy as np, pandas as pd
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); sys.path.insert(0, ROOT)
 from eda.atd import load
-from src.possession import fill_ball
+from src.possession import fill_ball, play_windows
 OUT = os.path.join(ROOT, "data_raw/pathcrf"); FPS = 25; MAX_GAP_S, MAX_SPEED, N_TRACK = 5.0, 8.0, 11
-HALVES = {1: (11185, 90652), 2: (113742, 190198)}
+HALVES = dict(enumerate(play_windows(), 1))   # {half: (kick-off, stop)}
 
 def stitch(P, slots):
     """P (F,46,2); slots of one team -> (F, N_TRACK, 2) persistent tracks, NaN where nobody.

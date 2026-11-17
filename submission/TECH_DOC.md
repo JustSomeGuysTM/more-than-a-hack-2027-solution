@@ -1,134 +1,268 @@
-# Ball possession for BAR–ATH — technical document (draft, team <team_name>)
+# Ball possession for BAR–ATH — technical document, team Just Some Guys
 
-> Status 2026-11-05: GPU run finished; team call switched to the soft PathCRF vote on 2026-11-04 (§2, §6); all numbers
-> final except the clean-clone reproduction check and file renaming.
+More than a Hack 2027, Phase 1 · 17 November 2026
 
-## 1. Approach in one paragraph
-Two stages. (1) A per-frame model turns the tactical tracking (players, ball when visible) into
-probabilities for *home / away / dead*; (2) a Viterbi decoder with a switch penalty turns those
-into whole possession spells, because the metric (spellF1) scores possessions, not frames. On top
-of that we run **PathCRF**, a published possession-path model that predicts the ball carrier from
-player movement alone (no ball needed). Our BiGRU alone decides when the ball is dead; on alive
-frames PathCRF's home/away call is a strong vote in a second decoding pass over the BiGRU's own team
-probabilities. Everything is trained on public data from *other* matches
-with real possession labels; nothing is tuned on the 5 public minutes of this game and no hand
-labels of this game exist anywhere in the pipeline.
+## Summary
 
-Why this and not something else: the given ball track is missing on 41% of graded frames and the
-player tracks are 46 unidentified slots with identity churn. A rule on "nearest player to the
-ball" (the organisers' baseline, spellF1 0.24) fails exactly where the ball is missing. A learned
-model can read possession from team shape, player speeds and time-since-last-touch, and a sequence
-model over player movement (PathCRF) does not need the ball at all. We validated every choice on
-held-out external matches with real labels, which is the only honest signal available.
+We label all 199,319 frames of BAR–ATH with two learned models chained together, both trained only on other matches
+that have official possession labels. On 7 held-out Bundesliga matches the full pipeline scores spellF1 0.60 /
+macroF1 0.89.
 
-## 2. Pipeline
+- **Dead ball:** a bidirectional GRU (BiGRU) reads 30-second windows of 46 per-frame tracking features and calls every
+  frame alive or dead.
+- **Team in possession:** PathCRF, a published possession-path model we retrained, reads player movement alone. It
+  still works on the 41% of graded frames where the ball is missing.
+- **Decoding:** a Viterbi pass with a switch penalty merges the two into whole possessions, because spellF1 scores
+  possessions, not frames.
+
+We also retrained PathCRF with 63 more matches from the PFF FC World Cup 2022 (trial 402). It came within noise of the
+submitted model on our validation match but missed the bar we set in advance, so the submission keeps the DFL-trained
+model.
+
+No labels of BAR–ATH, hand-made or otherwise, are used anywhere, and no choice was tuned on the public 5 minutes. As a
+sanity check only, the file scores 0.61 / 0.88 there, against 0.33 / 0.62 for the organisers' baseline.
+
+## Approach
+
+The pipeline reads possession from the players rather than from the ball. The given ball is missing on 41% of graded
+frames, and the 46 player slots carry no identities. A nearest-player rule, like the organisers' baseline, fails
+exactly where the ball is missing.
+
+```mermaid
+flowchart TD
+    ATD["Tactical tracking (ATD)<br/>46 unidentified player slots, ball seen on 59% of graded frames"]
+    F["Per-team features<br/>46 numbers per frame, slot-agnostic<br/>src/features.py"]
+    S["Track stitching<br/>46 slots → 11 tracks per team<br/>src/pathcrf_io.py"]
+    G["BiGRU<br/>30 s windows → log P(home, away, dead)<br/>src/seq.py"]
+    P["PathCRF, trial 401<br/>ball carrier from player movement<br/>inside live episodes of 10 s or more"]
+    V["Soft team vote<br/>dead balls kept exactly as the BiGRU decodes them<br/>live frames: Viterbi over home/away, BiGRU log-prob + 4 for PathCRF's team"]
+    CSV["Submission CSV<br/>199,319 rows: H, A or D on every frame"]
+    ATD --> F
+    ATD --> S
+    F --> G
+    S --> P
+    G -- "dead balls, team log-probs" --> V
+    G -- "live episodes" --> P
+    P -- "PathCRF's team" --> V
+    V --> CSV
 ```
-tactical ATD (25 fps, 46 slots, ball 57% visible)
-   ├─ src/features.py        46 slot-agnostic per-frame features (per-team nearest distances/counts, ball
-   │                          visibility & gap length, ball speed, position, team spread/speed, ±0.5 s/±2 s
-   │                          context, seconds since/until last home/away touch, ball off pitch, speed jump)
-   ├─ src/v2.py              HistGradientBoosting  -> log P(H/A/D) per frame -> Viterbi (switch 10)
-   ├─ src/seq.py             BiGRU (hidden 64, 30-s windows) over the same features -> Viterbi (switch 3); its dead balls are final
-   ├─ src/pathcrf_io.py      stitch 46 slots into 11 persistent tracks per team, cut alive episodes (≥10 s)
-   ├─ src/pathcrf_run.py     PathCRF home/away per frame inside the BiGRU's alive episodes
-   └─ src/seq.py --blend     team on alive frames: Viterbi over H/A on the BiGRU's team log-prob, +4 for the team
-                              PathCRF calls on that frame -> final CSV
-```
-Final label per frame: D wherever the BiGRU decodes a dead ball. On every other frame a Viterbi pass
-over home/away only (switch penalty 3, as above) scores each team by the BiGRU's log P(team | alive),
-plus 4 for the team PathCRF calls on that frame; frames PathCRF does not cover (alive stretches
-under 10 s) get no vote. A confident BiGRU can overrule PathCRF, which it does on 1.3% of the alive
-frames PathCRF covers. `X` is never emitted on graded frames.
 
-## 3. Possession rules we implemented
-- **Dead ball (D)**: learned from DFL's `ballstatus` code (official alive/dead). DFL freezes the ball
-  while dead whereas the BAR–ATH tracker keeps reporting a moving ball during stoppages, so during
-  training the DFL dead ball is re-synthesised (carried by the nearest player or drifting) and the model
-  has to read stoppages from the players: walking speeds, spread, set-piece shapes, ball off the pitch.
-  Dead runs shorter than 3 s are folded into the surrounding possession (threshold from DFL CV).
-  Restarts end D at the first touch.
-- **Loose balls / challenges**: no explicit rule; possession stays with the last team in
-  control until the decoder sees enough evidence of a controlled touch by the other team.
-  The switch penalty (chosen by leave-one-match-out CV on DFL, never on this game) makes a change
-  of possession cost roughly one second of contrary evidence, so a single deflection does not flip
-  the label but a won tackle does.
-- **PathCRF** defines possession as a path of carrier→receiver edges between identified players;
-  a possession spell is a maximal run of edges within one team. Goalkeeper identity is not given
-  on our data; the model is used without it.
-- Kick-offs at frames 11185 and 113742 (ball leaving the centre spot); frames before the first
-  kick-off and between halves are D.
+Dead balls come only from the BiGRU. On live frames PathCRF's team is a strong vote, which a confident BiGRU overrules
+on 1.4% of the frames PathCRF covers. `pod/pathcrf_setup.sh` runs these stages in order.
 
-## 4. Training data (every labelled dataset, none from the provided game)
-| dataset | source / licence | labelled by | volume | used for |
-|---|---|---|---|---|
-| DFL / IDSSE open dataset | github.com/floodlight-sports (CC-BY 4.0) | DFL official per-frame `possession` and `ballstatus` codes (human-validated event feed) | 7 Bundesliga matches 2022/23, 25 Hz, ~2.0 M frames after home/away mirroring | training + leave-one-match-out CV of the HGB, BiGRU and PathCRF; choice of switch penalties |
-| Metrica Sports sample data | github.com/metrica-sports/sample-data | team possession derived by us from Metrica's human-coded events | games 1+2, ~0.3 M frames | held-out sanity check only (never trained on) |
-| PFF FC World Cup 2022 | PFF FC public release (free sign-up) | algorithmic labels written by us from PFF's human-coded on-ball events (rule in `src/pff.py`) | 64 matches, 25 fps resampled, ~10 M frames | PathCRF training only: helped on the ablation fold (0.64 vs 0.61) but the DFL-only model trained longer won on both checks, so the submitted PathCRF uses DFL only; PFF-trained checkpoints are in the weights release. Also relabelled by a teacher model trained on DFL (`src/label_transfer.py`), tested for the frame models and dropped |
-| PathCRF authors' checkpoint `saved/140` | github.com/hyunsungkim-ds/pathcrf (KDD 2026) | trained by the authors on the same DFL open dataset (leave-one-out, held-out J03WR9) | — | reference only; the submitted model is our own retraining (trial 401) |
-| SoccerNet-Echoes + SoccerNet labels | github.com/SoccerNet | Whisper transcripts; SoccerNet human action labels | 330 matches | commentary stoppage model (dropped, see §5) |
-| BAR–ATH tactical ATD | provided | automatic | — | inference only; also the source of algorithmic ball-detector tiles (dropped, §5) |
+**Design choices, and the evidence for each.** Every choice below was made by leave-one-match-out cross-validation on
+7 public Bundesliga (DFL) matches, never on this game.
 
-DFL tracking is complete, so during training it is degraded to BAR–ATH's measured quality: ball
-gaps drawn from the tactical feed's run-length distribution (59% visible, gaps sub-second or 3 s+),
-1–8 players untracked in stretches (20.5 of 22 tracked per frame), a moving dead ball; home/away are
-mirrored. Training on a milder degradation looks better on the public 5 minutes (whose ball is almost
-complete) but worse on held-out DFL degraded realistically (0.42 vs 0.44 spellF1), so the realistic one is used.
+- **Slot-agnostic features** (`src/features.py`). 46 per-frame numbers: per-team nearest distance to the ball and
+  player counts near it, ball visibility and gap length, ball speed and position, team spread and speed, ±0.5 s and
+  ±2 s context, seconds since and until each team's last touch, and ball off the pitch. Built per team, not per slot,
+  so 46 churning tracklets and 22 clean tracks look alike to the model.
+- **A sequence model for dead balls** (`src/seq.py`). A 2-layer bidirectional GRU (hidden size 64) reads 30-second
+  windows and outputs log P(home / away / dead) per frame. It beat our first model, a gradient-boosted frame
+  classifier on the same features: spellF1 0.467 vs 0.438 on held-out DFL.
+- **PathCRF for the team** (`src/pathcrf_run.py`). A published model ([PathCRF, KDD 2026](https://github.com/hyunsungkim-ds/pathcrf))
+  that predicts the ball carrier from player movement alone; we take the carrier's team. We retrained it ourselves
+  (trial 401). With true dead balls it scores 0.647 on the 7 DFL folds, against 0.474 for the frame classifier.
+- **Track stitching** (`src/pathcrf_io.py`). PathCRF needs up to 11 persistent players per team. We join slot
+  segments into tracks when a new segment starts within 5 s and at most 8 m/s from where a track ended, then fill gaps
+  of up to 2 s.
+- **A soft team vote** (`src/seq.py --blend`). On alive frames, a Viterbi pass over home and away scores each team by
+  the BiGRU's log-probability plus 4 for the team PathCRF calls. It beat letting PathCRF override outright by +0.014
+  spellF1, better on 7 of 7 folds.
+- **A switch penalty, not smoothing.** Viterbi charges a fixed cost per change of possession, so one ambiguous frame
+  cannot split a possession. The penalty of 3 (log-odds) was picked on DFL folds from 3, 6, 10 and 15.
 
-## 5. Assets tried and dropped (all documented in `eda/NOTES.md`)
-| asset | what we did | why dropped |
-|---|---|---|
-| broadcast video + broadcast ATD | OCR'd the scoreboard clock to align broadcast to tactical frames (±0.5 s); tried fusing the broadcast ball | broadcast ball covers 26% of graded frames and adds 2.6% new frames |
-| broadcast audio | referee-whistle detector on the Demucs crowd stem; restart words from local Whisper commentary transcripts | the crowd whistles constantly: P(dead | whistle) 0.14 vs base 0.20 |
-| commentary stoppage model | TF-IDF + logistic regression trained on SoccerNet-Echoes vs SoccerNet stoppage labels (other games) | held-out AUC 0.57; too weak to add as a decode-time prior |
-| own ball detector (YOLOv8n on tactical frames, labels projected from the ATD ball, no human labels) | fills ball gaps from 59% to ~78% visibility | neutral once judged honestly: a simulator of the detector's error profile on the DFL leave-one-out moves spellF1 by +0.006 at best, and reproduction would need a 2.5-h detector pass |
-| smart tagging | SET PIECES windows as dead-ball evidence | only 56% of their frames are dead; no restart moment readable |
-| PFF for the HGB / BiGRU | added 64 matches to training, first with a hand event-to-label rule, then with labels from a teacher model trained on DFL to reproduce the official labels (0.75 / 0.95 vs official) | neutral on held-out DFL (0.438 → 0.429 rule, 0.431 teacher): data volume is not the frame model's bottleneck |
-| team-shape features | per team: convex-hull area, share of the pitch it controls (nearest player on a grid), share near the ball, ±0.5 s / ±2 s means (`SPACE=1` in `src/features.py`); added to the HGB and the BiGRU | lift the BiGRU alone on held-out DFL (0.467 → 0.518) but not the pipeline (0.598 vs 0.602 with the soft team vote): PathCRF already carries the team-shape signal |
+We focused on the team call because that is where the score is lost. On DFL, perfect dead balls would add 0.026
+spellF1 to our pipeline; a perfect team call on alive frames would add 0.315.
 
-## 6. Results (held-out external matches; public 5 min reported as sanity only)
-| model | DFL leave-one-match-out spellF1 / macroF1 | public 5 min (sanity) |
-|---|---|---|
-| organisers' baseline_smooth50 | 0.12 / 0.44 | 0.33 / 0.62 |
-| HGB v2 (38 features) | 0.50 / 0.89 | 0.52 / 0.70 |
-| HGB v3 (46 features), frozen DFL dead ball, mild degradation | 0.56 / 0.91 | 0.39 / 0.69 |
-| HGB v3 + dead-ball augmentation + 3-s minimum, mild degradation | 0.53 / 0.89 | 0.54 / 0.83 |
-| **HGB v3, realistic degradation (measured ball gaps + player dropout; the yardstick from here on)** | 0.44 / 0.83 | 0.44 / 0.81 |
-| BiGRU, frozen DFL dead ball, mild degradation | 0.60 / 0.91 | 0.47 / 0.67 |
-| BiGRU + dead-ball augmentation + 3-s minimum, mild degradation | 0.58 / 0.91 | 0.64 / 0.76 |
-| **BiGRU, realistic degradation** | 0.46 / 0.84 | 0.63 / 0.88 |
-| PathCRF authors' checkpoint + HGB (realistic) dead balls | – | 0.58 / 0.83 |
-| PathCRF authors' checkpoint + BiGRU (realistic) dead balls | – | 0.61 / 0.88 |
-| PathCRF authors' checkpoint + v2 dead balls | 0.69 / 0.95 (one match) | 0.62 / 0.72 |
-| PathCRF authors' checkpoint + augmented HGB dead balls | – | 0.62 / 0.85 |
-| **PathCRF ours, DFL only (7 folds, 30 epochs)** | **0.65 / 0.93** | 0.50 / 0.87 (fold-6 model) |
-| PathCRF ours, DFL + PFF (ablation fold 0, 15 epochs) | 0.64 / 0.94 (fold 0 DFL-only: 0.61 / 0.93) | 0.59 / 0.88 |
-| PathCRF ours, DFL + PFF final (trial 400, 15 epochs) + BiGRU dead balls | 0.68 / 0.95 on its DFL validation match | 0.56 / 0.86 |
-| our PathCRF trial 401 (DFL only, authors' settings, 50 epochs) + BiGRU dead balls, PathCRF team overrides (submitted until 2026-11-04) | 0.71 / 0.95 on its DFL validation match | 0.66 / 0.88 |
-| BiGRU dead balls + PathCRF fold models (200–206) team override, 7 DFL folds, PathCRF in official episodes | 0.59 / 0.89 | – |
-| same, soft team vote (w = 4, chosen on these folds; 2 and 4 tried) | 0.60 / 0.89 (+0.014, better on 7/7 folds) | – |
-| **submitted: PathCRF trial 401 + BiGRU dead balls + soft team vote (w = 4)** | see the two rows above | **0.66 / 0.89** |
+## Possession rules
 
-## 7. Limitations
-- Dead-ball onsets are still ~3 s late: the tracker's ball keeps moving after the whistle and the
-  only cue is the players' behaviour. Restart ends are now within a frame or two.
-- PathCRF expects 11 identified players per team; our stitched tracks have ~10.8 per frame and
-  identity switches inside a track are unavoidable.
-- Everything is calibrated on Bundesliga tempo; LaLiga differs.
-- The 5-minute public window has 17 possessions, so all its numbers are within ±0.05 noise.
-- With more time: a referee-whistle classifier trained on other games' audio, degrading DFL
-  player tracking to BAR–ATH's slot/ID quality for honest model selection, and a PFF possession
-  rule tuned against DFL so PFF can help the frame models too.
+We follow the ground truth's own definition: dead ball comes from the official ball status, and live play belongs to
+the team in control until the other team takes control. Most lines are learned from DFL's official labels rather than
+hand-written; the decoder's switch penalty sets the rest.
 
-## 8. Reproduction
+| Situation | What the pipeline does | How it was set |
+| --- | --- | --- |
+| Ball out of play | `D`, read from the players: walking speeds, spread, set-piece shapes, ball off the pitch | Learned from DFL's official `ballstatus`. DFL freezes a dead ball but BAR–ATH's tracker keeps it moving (median 2.7 m/s), so in training 60% of DFL dead balls are carried by the nearest player and 40% drift |
+| Stoppage under 3 s | Takes the label before it | 3 s chosen on DFL folds; 2.7% of DFL stoppages are shorter |
+| Restart | `D` ends at the restart touch; the restarting team is not assumed | Learned |
+| Loose ball, deflection, aerial duel | Possession stays with the last team in control | No explicit rule: the switch penalty means one contrary touch is not enough |
+| Tackle won, interception | Changes team once contrary evidence, mostly PathCRF's carrier call, outweighs the switch penalty | Switch penalty 3, chosen on DFL folds |
+| Ball not tracked | PathCRF still calls a carrier from player movement; the BiGRU sees time since each team's last touch | — |
+| Live stretch under 10 s | The BiGRU's team alone, since PathCRF needs a 10 s window | — |
+| Before kick-off, half-time, after the final whistle | `D` | Halves from the organisers' `games.py`; second-half kick-off at frame 113742, as published in the organisers' FAQ.md. Both are defined once, in `src/possession.play_windows` |
+
+We never write `X` on a graded frame. Because spellF1 fills an abstention with the previous label, `X` would only help
+inside a possession, where our decoder already holds the label steady.
+
+## Assets used and dropped
+
+The submission reads one provided asset at inference: the tactical tracking. We tried every other asset and dropped
+each one when held-out data showed it did not help.
+
+**Used in the submission**
+
+| Asset | How we use it |
+| --- | --- |
+| Tactical tracking (ATD), players and ball | The only model input. Per-team features for the BiGRU; slots stitched into 11 tracks per team for PathCRF |
+| Tactical tracking, measured noise | Its ball gaps (visible on 59% of graded frames, gaps under 1 s or over 3 s) and player dropout (20.5 of 22 tracked) are copied onto the DFL training data, so we validate on data that looks like this match |
+| Frame alignment (`games.py`) | Half boundaries, plus the second-half kick-off frame the organisers publish in FAQ.md; frames outside play are `D` |
+| Tactical video and homography | Watched for QA and debugging only, with predicted labels overlaid. Never used to make or correct labels |
+
+**Tried and dropped**
+
+| Asset | What we tried | Why we dropped it |
+| --- | --- | --- |
+| Broadcast video and tracking | Aligned to tactical frames by reading the scoreboard clock with OCR (±0.5 s), then merged its ball | It has a pitch-coordinate ball on only 26% of graded frames, and adds 2.6% frames the tactical feed lacks |
+| Broadcast audio | A referee-whistle detector on the separated crowd audio; a stoppage classifier on local Whisper transcripts of the commentary, trained on SoccerNet-Echoes | The crowd whistles constantly: P(dead \| whistle) is 0.14 against a 0.20 base rate. The commentary classifier reached held-out AUC 0.57 |
+| Smart Tagging | `SET PIECES` windows as dead-ball evidence | Only 56% of their frames are dead, and the restart moment cannot be read from them |
+| Our own ball detector (tactical video + homography) | YOLOv8n trained on tiles labelled by projecting the tracked ball into the image, no human labels. Raises ball coverage from 59% to about 78% | Simulated on DFL folds it adds at most 0.007 spellF1, inside fold noise, and reproducing it costs a 2.5-hour detector pass. Versions trained on SoccerNet did no better on our feed |
+
+## Training data
+
+Both submitted models are trained on one dataset: 7 public DFL matches with official possession labels. No labelled
+data from BAR–ATH is used, by hand or otherwise. Our largest PathCRF run, trial 402, added 63 PFF World Cup matches
+labelled by our DFL-trained teacher; Results compares it with the submitted model. The other datasets below were tried
+too, and are listed because they shaped decisions.
+
+| Dataset | Source and licence | Labelled by | Volume | Used for | In the submission |
+| --- | --- | --- | --- | --- | --- |
+| DFL / IDSSE open dataset | [floodlight](https://github.com/floodlight-sports/floodlight), CC-BY 4.0 | DFL's official per-frame possession and ball-status codes | 7 Bundesliga matches 2022/23, 25 Hz, about 2.0 M frames after home/away mirroring | Training and leave-one-match-out validation of the BiGRU and PathCRF; every hyperparameter | Yes |
+| PFF FC World Cup 2022 | PFF FC public release, free sign-up | Our algorithm, from PFF's human-coded on-ball events (`src/pff.py`); later a teacher model trained on DFL (`src/label_transfer.py`) | 64 matches, resampled to 25 fps | PathCRF training (trials 300, 400, 402); frame-model training | No: the DFL-only PathCRF was not beaten by enough on the validation match, and PFF was neutral for the frame models |
+| Metrica Sports sample data | [metrica-sports/sample-data](https://github.com/metrica-sports/sample-data) | Team possession derived by us from Metrica's human-coded events | 2 matches | Held-out sanity check for early models | No |
+| PathCRF authors' checkpoint | [hyunsungkim-ds/pathcrf](https://github.com/hyunsungkim-ds/pathcrf) | Trained by the authors on the same DFL data | 1 checkpoint | Reference point for our retraining | No: we submit our own retraining |
+| SoccerNet-Echoes and SoccerNet action labels | [SoccerNet](https://github.com/SoccerNet) | Whisper transcripts; SoccerNet's human action labels | 330 matches | Commentary stoppage classifier | No (dropped) |
+| SoccerNet Tracking 2023 | [SoccerNet](https://github.com/SoccerNet) | Human-drawn ball boxes | 57 broadcast clips | Ball detector training | No (dropped) |
+
+**Making DFL look like BAR–ATH.** DFL tracking is complete, so in training we degrade it to this match's measured
+quality. The ball is hidden in runs drawn from the tactical feed's own gap lengths, 1 to 8 players drop out in
+stretches, and the dead ball keeps moving. Home and away are mirrored. A model trained on a milder degradation scored
+0.416 on realistically degraded held-out DFL, against 0.438 for one trained realistically, so we use the realistic one.
+
+## Results
+
+On 7 held-out DFL matches, degraded to BAR–ATH's tracking quality, the submitted pipeline scores spellF1 0.602 /
+macroF1 0.891. Each stage added to that score, and PathCRF's team call added the most.
+
+| Stage (spellF1, mean of 7 DFL matches, each held out in turn) | spellF1 | Gain |
+| --- | --- | --- |
+| Frame classifier (gradient boosting) | 0.438 | |
+| BiGRU instead of the frame classifier | 0.467 | +0.029 |
+| PathCRF team call on live frames | 0.588 | +0.121 |
+| Soft team vote (submitted) | 0.602 | +0.014 |
+
+Here PathCRF ran inside DFL's official live episodes. Cutting the episodes from the BiGRU's own dead balls, as on
+BAR–ATH, cost 0.001.
+
+| Check | spellF1 | macroF1 | What it is |
+| --- | --- | --- | --- |
+| DFL, 7 folds, mean | 0.602 | 0.891 | Held out: each match scored by models trained on the other 6. Our yardstick for every decision |
+| DFL validation match J03WR9, submitted PathCRF | 0.707 | 0.954 | True dead balls. Optimistic: this match also picked the checkpoint |
+| BAR–ATH public 5 minutes | 0.610 | 0.880 | Sanity check only, 17 possessions (organisers' baseline: 0.326 / 0.621) |
+
+**Choosing the PathCRF model.** We trained three final candidates on a rented RTX 4090 and judged them on the DFL
+validation match J03WR9, with true dead balls. Trial 401 is submitted. Trial 402 came closest, but it missed the bar we
+set before training it: +0.02 spellF1 over 401 with no loss of macroF1.
+
+| Trial | Training data | Training | J03WR9 spellF1 | J03WR9 macroF1 |
+| --- | --- | --- | --- | --- |
+| 401 (submitted) | 6 DFL matches | 50 epochs, batch 32 | 0.707 | 0.954 |
+| 402 | 6 DFL + 63 PFF matches, PFF labels from our DFL-trained teacher | 30 epochs, batch 64 | 0.715 | 0.948 |
+| 400 | 6 DFL + 63 PFF matches, PFF labels from our event rule | 15 epochs, batch 64 | 0.683 | 0.947 |
+| Authors' checkpoint, for reference | 5 DFL matches | 50 epochs, batch 32 | 0.727 | 0.949 |
+
+J03WR9 also picked the checkpoint of each of our trials, so our three numbers are optimistic by a similar margin; the
+authors' model never saw it. The public 5 minutes were never used to choose.
+
+**How much is left.** The DFL folds put the ceiling for better dead balls at about +0.026 spellF1, and for a perfect
+team call at +0.315. PathCRF trained and ran on clean DFL player tracks, so the 0.602 is likely optimistic for this
+match's noisier tracks.
+
+Every experiment behind these numbers, including the negative ones, is written up in `eda/NOTES.md`.
+
+## Limitations
+
+Most remaining errors are in the team call around turnovers, not in dead balls. We typed every error on the 7 DFL
+folds (`eda/qa.py`) and watched clips of each type.
+
+- **Turnovers with the ball hidden.** In midfield duels PathCRF often switches team 3 to 6 s before or after the real
+  turnover. Missed changes (494 cases, 819 s) and wrong-team spells (264 cases, 740 s) are the two largest error
+  types. 88% of wrong-team frames are PathCRF's own calls.
+- **Short live stretches.** PathCRF needs a 10 s window, so live stretches shorter than that fall back to the BiGRU.
+  That is 4% of live frames, called right 70% of the time against 91% where PathCRF runs, and 12% of all wrong-team
+  frames.
+- **Late stoppages.** On BAR–ATH, dead-ball onsets come about 3 s late, because the tracked ball keeps moving after
+  the whistle and only the players' behaviour gives it away. Restarts are within a frame or two.
+- **Track identity.** PathCRF expects 11 identified players per team. Our stitched tracks average about 10.8 per
+  frame, and identity switches inside a track remain. Training never simulated those switches.
+- **League and sample.** Every model is calibrated on Bundesliga matches, and LaLiga tempo differs. The 5 public
+  minutes hold 17 possessions, so any number on them carries about ±0.05 of noise.
+
+**With more time we would:**
+
+1. Run PathCRF on short live stretches by padding them to its window.
+2. Train the DFL plus PFF PathCRF at the authors' full length (50 epochs, batch 32). At 30 epochs, trial 402 already
+   edged past 401 on spellF1 (0.715 against 0.707).
+3. Add a better ball. Our simulation puts a detector that fills half of the hidden frames, with 2% gross errors, at
+   +0.02 spellF1.
+4. Degrade DFL player tracks to this match's slot and identity quality when training PathCRF.
+5. Model stoppages with duration priors (a hidden semi-Markov decoder) and longer context, to cut the late onsets.
+
+## Reproduction
+
+One script regenerates the submitted CSV from a clean clone and the data bundle, on CPU, in about 20 minutes once the
+image is built. The BiGRU weights are in the repository. PathCRF's code is fetched at a pinned commit (`1b7c6f8`) and
+patched (`pod/pathcrf.patch`), and our trained PathCRF weights download from the repository's release.
+
+The reference environment is the Docker image in `docker/`: Python 3.11.11, torch 2.5.1 (CPU), numpy 1.26.4, pandas 2.2.3,
+scikit-learn 1.5.2, pyarrow 17.0.0 and torch_geometric 2.6.1.
+
 ```bash
-git clone <public repo>; cd <repo>; python3 -m venv .venv; .venv/bin/pip install -r requirements.txt
-# unpack the data bundle into data/ as in README.md
-.venv/bin/python src/seq.py                                      # dead balls (BiGRU, weights committed) -> evaluation/results/seq.csv
-bash pod/pathcrf_setup.sh                                        # PathCRF code+patch+venv, our weights (GitHub release), inference,
-                                                                 # then the soft team vote (src/seq.py --blend) -> evaluation/results/pathcrf.csv
-cp evaluation/results/pathcrf.csv submission/<team_name>.csv
-python evaluation/validate_submission.py submission/<team_name>.csv
+git clone <public repo URL> mtah && cd mtah
+# unpack the data bundle into data/, as in README.md
+docker compose up -d --build
+docker compose exec -u dev mtah bash -lc 'cd /workspace && bash pod/pathcrf_setup.sh'
+python evaluation/validate_submission.py evaluation/results/pathcrf.csv
 ```
-Retraining: `src/v2.py --train` (2 min, laptop), `src/seq.py --train` (25 min), PathCRF via
-`pod/vast.sh` on one RTX 4090 (~85 GPU-hours for the 7 DFL folds, the PFF ablation fold and the
-final model). Fold logs are committed under `pod/logs/`.
+
+`evaluation/results/pathcrf.csv` is the file we submitted under our team name.
+
+**Without Docker.** `pod/venv_setup.sh` builds the same environment as a virtualenv in `.venv`, with the same pinned
+versions and CPU torch, and fetches PathCRF's code into `~/pathcrf`. It needs Python 3.11 and git, on macOS or Linux (on
+Windows, use WSL).
+
+```bash
+git clone <public repo URL> mtah && cd mtah
+# unpack the data bundle into data/, as in README.md
+bash pod/venv_setup.sh        # or: PYTHON=/path/to/python3.11 bash pod/venv_setup.sh
+bash pod/pathcrf_setup.sh
+.venv/bin/python evaluation/validate_submission.py evaluation/results/pathcrf.csv
+```
+
+We ran this from a clean clone on an Apple Silicon Mac (Python 3.11.14). The final CSV is byte-identical to the one the
+container makes, which is the file we submitted. Intermediate float files differ only in the last digits (at most 6e-6 in
+the BiGRU log-probabilities), and no frame's label changes. Installing takes about 25 minutes, mostly a 1.2 GB download;
+the pipeline then runs in about 8 minutes.
+
+| Step in `pod/pathcrf_setup.sh` | Command | CPU time in the container |
+| --- | --- | --- |
+| BiGRU dead balls and log-probabilities | `src/seq.py` | about 14 min |
+| Stitch tracks, cut live episodes | `src/pathcrf_io.py` | 5 s |
+| PathCRF team calls, trial 401 | `src/pathcrf_run.py --trial 401 --alive evaluation/results/seq.csv` | about 2 min |
+| Soft team vote, final CSV | `src/seq.py --blend --trial 401` | seconds |
+
+**Retraining** needs the DFL open data (`dfl-cache` in the container downloads 2.4 GB). The BiGRU retrains with
+`src/seq.py --train` in about 25 minutes on a laptop. PathCRF trains with `pod/vast.sh` on one RTX 4090; the 7 folds,
+the PFF ablation and trials 400 and 401 took about 85 GPU-hours, and trial 402 was a separate run. Their training logs
+are in `pod/logs/`.
+
+## Team
+
+Just Some Guys, four members.
+
+| Member | Main work |
+| --- | --- |
+| Elijah Cavan | Features, frame and sequence models, PathCRF training, QA and error audit, ball-detector research |
+| Brandon Hiles | Docker environment, submission and reproduction, BiGRU and team-vote integration |
+| William Ngana | PathCRF retraining on DFL plus PFF (trial 402) |
+| Gurashish Bagga | Ball detector trained on SoccerNet |

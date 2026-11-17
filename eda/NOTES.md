@@ -2,9 +2,9 @@
 
 ## Reproduce PathCRF on BAR-ATH (any teammate, ~10 min + weights download)
 ```bash
-pip install -r requirements.txt            # this repo's .venv, data/ unpacked as in README
+bash pod/venv_setup.sh                     # .venv pinned as in docker/ + PathCRF code in ~/pathcrf (or use the container, docker/README.md); data/ unpacked as in README
 gh auth login                              # needs access to the team repo (weights live in its GitHub release `pathcrf-weights`)
-bash pod/pathcrf_setup.sh                  # clones+patches PathCRF into ~/pathcrf, venv, weights, BAR-ATH parquet, inference
+bash pod/pathcrf_setup.sh                  # weights, BAR-ATH parquet, inference, blend
 ```
 Writes `evaluation/results/pathcrf.csv` (PathCRF home/away on alive frames, dead balls from our BiGRU; since 2026-11-04 the
 team call is the soft blend `src/seq.py --blend`, PathCRF vote w=4, see "BiGRU and the PathCRF team blend") and prints the
@@ -12,7 +12,8 @@ public-window sanity score. `TRIAL=140` runs the authors' checkpoint (shipped in
 Training itself is `pod/vast.sh` on a rented GPU (see its header); fold logs and CV numbers are in the PathCRF section below.
 
 ## TODO after the GPU run (for anyone on the team)
-0. **PathCRF DFL + PFF at the long setting** (the one GPU experiment left; ~2 weeks of slack before Nov 17). The ablation
+0. **Done 2026-11-17, not adopted** (trial 402: J03WR9 0.715 / 0.948 vs 401's 0.707 / 0.954; see the PathCRF section).
+   **PathCRF DFL + PFF at the long setting** (the one GPU experiment left; ~2 weeks of slack before Nov 17). The ablation
    said PFF helps at equal training length, the 15-epoch DFL+PFF final (400) lost to the 50-epoch DFL-only one (401).
    Run on the box (keep it alive or re-rent + `pod/vast.sh pack/setup`; the converter now applies all three PFF id fixes):
    `cd ~/pathcrf && TRIAL=402 SOURCES="sportec pff" N_EPOCHS=30 nohup bash vast.sh full > full402.log 2>&1 &`
@@ -396,6 +397,32 @@ PathCRF versions (`plans/submission_checklist.md` step 2), container PathCRF num
 top changes 1.1% of PathCRF's calls and scores the same, 0.673 / 0.881.
 Blend inputs are now per trial: `src/pathcrf_run.py` writes `eda/out/pathcrf_barath_team_<trial>.npy`, and
 `src/seq.py --blend --trial N --out F` reads it, so scoring 402 no longer replaces 401's team calls (`plans/402_retrain.md` step 5).
+**Clean-clone check in the container (2026-11-17).** Fresh `git clone` of `Submission` (79e22ca) inside the container,
+data bundle linked into `data/`, then `TRIAL=140 bash pod/pathcrf_setup.sh` (the authors' checkpoint standing in for 401,
+whose weights were not on that machine; the release download was skipped because `saved/140` exists). Ran end to end
+in 10 min, the CSV validates, and `seq.csv`, `seq_barath_logp.npy`, `BARATH.parquet`, the PathCRF team calls and the
+final `pathcrf.csv` are byte-identical to the same steps run earlier in `/workspace`; a second 402 run was byte-identical
+too. So the Docker path is deterministic. Still unchecked: the 401 weights through it, the weights download, and whether
+the laptop-made 401 CSV equals the container's (container and laptop PathCRF differ, see above): regenerate the
+submitted CSV in the container so the documented steps reproduce it.
+**Submission CSV rebuilt in the container with 401 (2026-11-17).** Weights from the `pathcrf-weights` release (`401.tgz`,
+Eli's Oct 29 tarball, md5 b781d647e0c6fe257d7f130d09faa30c; backed up to `s3://more-than-a-hack-2027/derived/pathcrf/401.tgz`).
+In the container 401 scores J03WR9 **0.707 / 0.954**, exactly the laptop's, so the model is right. `bash pod/pathcrf_setup.sh`
+(default trial 401) then writes `evaluation/results/pathcrf.csv`: valid, 455 possessions; public window (sanity only)
+**0.610 / 0.880, 25 spells**, vs the laptop file's 0.660 / 0.884 (23). Same weights and same DFL score, so the BAR-ATH gap
+comes from the inputs built in each environment, not from PathCRF; within the window's +-0.05 noise either way. The
+container file is the submission (`submission/JustSomeGuys.csv`, md5 6f394376f6744e6998c6cb1713012c16) because it is the one
+the documented Docker steps reproduce; the tech doc quotes its numbers. The soft vote changes 1.4% of PathCRF's calls.
+**Without Docker: `pod/venv_setup.sh` (2026-11-17).** Builds the image's environment as one virtualenv in `.venv` (Python 3.11,
+torch 2.5.1 from the CPU index, then `requirements-model.txt` + `docker/requirements-docker.txt` + PathCRF's requirements in one
+resolve, `pip check`), clones + patches PathCRF into `~/pathcrf` and links `~/pathcrf/.venv` to `.venv`, so
+`pod/pathcrf_setup.sh` runs unchanged; that script no longer makes its own unpinned venv and stops with a pointer instead.
+Checked from a clean clone on an M-series Mac (Homebrew Python 3.11.14, throwaway HOME, 401 weights from `401.tgz`): install
+24 min (1.2 GB of wheels), pipeline 8 min, and the final `pathcrf.csv` is **byte-identical to `submission/JustSomeGuys.csv`**.
+`seq.csv` and the PathCRF team calls are byte-identical too; `seq_barath_logp.npy` differs by at most 6.4e-6 and
+`BARATH.parquet` by 1.9e-13, with no label changed. So the old laptop file's different numbers came from that laptop's
+unpinned environment, not from macOS.
+
 
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with
@@ -457,6 +484,15 @@ the GitHub release `pathcrf-weights`; `pod/logs/` has every training log. Box de
 | authors' checkpoint 140 (their LOMO fold, J03WR9 held out) | 0.727 / 0.949 | 0.605 / 0.875, 26 spells |
 | **ours 401, DFL only, 50 epochs** | **0.707 / 0.954** | **0.660 / 0.884, 23 spells** |
 | ours 400, DFL + PFF, 15 epochs | 0.683 / 0.947 | 0.556 / 0.855, 24 spells |
+| ours 402, DFL + PFF (teacher labels), 30 epochs | 0.715 / 0.948 | 0.574 / 0.861, 22 spells (container, soft vote) |
+
+**Trial 402 scored 2026-11-17** (`pathcrf_run.py --trial 402 --dfl J03WR9` in the container; args: 30 epochs, batch 64,
+resumed from epoch 26, best_acc 0.6013). J03WR9 **0.715 / 0.948**, 329 spells (gt 370). The authors' 140 in the same run
+gives its known 0.727 / 0.949, so the scoring matches the laptop's. Decision rule (`plans/402_retrain.md`): adopt only at
+J03WR9 >= 0.727 and >= 0.949, so **401 stays**. The public window agrees (sanity only): 402 with the soft vote 0.574 / 0.861,
+140 0.673 / 0.881 in the same container (container PathCRF numbers run higher than the laptop's, see "BiGRU on BAR-ATH in
+the Docker container"). J03WR9 came from the bucket's `external/dfl/pathcrf_tracking_processed/`. Not yet stored: the 402
+weights (neither S3 nor, as far as we can see, the release) and `full402.log` (not in `pod/logs/`).
 Incident: the queue stalled 1 h after fold 0 because two stale watcher shells whose command lines contained `train.py`
 kept `pgrep -f train.py` true; killed, folds 1-6 running. Fold logs: `pod/logs/`.
 
@@ -548,7 +584,10 @@ or `X` (abstain). Scored on the private full-match truth; we only see the first 
 | videos | tactical 199,319 f; broadcast 164,488 f; ~13 GB | downloading into `data_raw/` |
 
 Graded frames: 11185–90651 (1st half) and 110808–190197 (2nd half). 2nd half kicks off at
-113742 — the 2,934 frames before that are graded and all `D`.
+113742 — the 2,934 frames before that are graded and all `D`. Both kick-offs are the organisers' published numbers
+(`games.half_video_blocks`, FAQ.md), defined once in `src/possession.play_windows` (2026-11-08; before that, copies in
+seven files). Rerun in the container after the change: `seq.csv`, `seq_barath_logp.npy` and `BARATH.parquet` are
+byte-identical to the ones before it.
 
 ## What the public 5 minutes shows (`eda/out/timeline_public.png`)
 - 21 segments / 17 possessions, mean 14 s, but possessions as short as **0.76 s and 1.3 s** exist
