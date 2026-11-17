@@ -1,6 +1,6 @@
 # Ball possession for BAR–ATH — technical document, team Just Some Guys
 
-More than a Hack 2027, Phase 1 · 8 November 2026
+More than a Hack 2027, Phase 1 · 17 November 2026
 
 ## Summary
 
@@ -14,6 +14,10 @@ macroF1 0.89.
   still works on the 41% of graded frames where the ball is missing.
 - **Decoding:** a Viterbi pass with a switch penalty merges the two into whole possessions, because spellF1 scores
   possessions, not frames.
+
+We also retrained PathCRF with 63 more matches from the PFF FC World Cup 2022 (trial 402). It came within noise of the
+submitted model on our validation match but missed the bar we set in advance, so the submission keeps the DFL-trained
+model.
 
 No labels of BAR–ATH, hand-made or otherwise, are used anywhere, and no choice was tuned on the public 5 minutes. As a
 sanity check only, the file scores 0.66 / 0.89 there, against 0.33 / 0.62 for the organisers' baseline.
@@ -117,13 +121,14 @@ each one when held-out data showed it did not help.
 ## Training data
 
 Both submitted models are trained on one dataset: 7 public DFL matches with official possession labels. No labelled
-data from BAR–ATH is used, by hand or otherwise. The other datasets below were tried, and are listed because they
-shaped decisions.
+data from BAR–ATH is used, by hand or otherwise. Our largest PathCRF run, trial 402, added 63 PFF World Cup matches
+labelled by our DFL-trained teacher; Results compares it with the submitted model. The other datasets below were tried
+too, and are listed because they shaped decisions.
 
 | Dataset | Source and licence | Labelled by | Volume | Used for | In the submission |
 | --- | --- | --- | --- | --- | --- |
 | DFL / IDSSE open dataset | [floodlight](https://github.com/floodlight-sports/floodlight), CC-BY 4.0 | DFL's official per-frame possession and ball-status codes | 7 Bundesliga matches 2022/23, 25 Hz, about 2.0 M frames after home/away mirroring | Training and leave-one-match-out validation of the BiGRU and PathCRF; every hyperparameter | Yes |
-| PFF FC World Cup 2022 | PFF FC public release, free sign-up | Our algorithm, from PFF's human-coded on-ball events (`src/pff.py`); later a teacher model trained on DFL (`src/label_transfer.py`) | 64 matches, resampled to 25 fps | PathCRF training ablations (trials 300, 400); frame-model training | No: the DFL-only PathCRF won both checks, and PFF was neutral for the frame models |
+| PFF FC World Cup 2022 | PFF FC public release, free sign-up | Our algorithm, from PFF's human-coded on-ball events (`src/pff.py`); later a teacher model trained on DFL (`src/label_transfer.py`) | 64 matches, resampled to 25 fps | PathCRF training (trials 300, 400, 402); frame-model training | No: the DFL-only PathCRF was not beaten by enough on the validation match, and PFF was neutral for the frame models |
 | Metrica Sports sample data | [metrica-sports/sample-data](https://github.com/metrica-sports/sample-data) | Team possession derived by us from Metrica's human-coded events | 2 matches | Held-out sanity check for early models | No |
 | PathCRF authors' checkpoint | [hyunsungkim-ds/pathcrf](https://github.com/hyunsungkim-ds/pathcrf) | Trained by the authors on the same DFL data | 1 checkpoint | Reference point for our retraining | No: we submit our own retraining |
 | SoccerNet-Echoes and SoccerNet action labels | [SoccerNet](https://github.com/SoccerNet) | Whisper transcripts; SoccerNet's human action labels | 330 matches | Commentary stoppage classifier | No (dropped) |
@@ -155,9 +160,19 @@ BAR–ATH, cost 0.001.
 | DFL validation match J03WR9, submitted PathCRF | 0.707 | 0.954 | True dead balls. Optimistic: this match also picked the checkpoint |
 | BAR–ATH public 5 minutes | 0.660 | 0.886 | Sanity check only, 17 possessions (organisers' baseline: 0.326 / 0.621) |
 
-**Choosing the PathCRF model.** We trained two final candidates on a rented RTX 4090. Trial 401 (DFL only, 50
-epochs) beat trial 400 (DFL plus 63 PFF matches, 15 epochs) on the validation match, 0.707 against 0.683, so we
-submitted 401. The public window agreed (0.660 against 0.556), but it was never used to choose.
+**Choosing the PathCRF model.** We trained three final candidates on a rented RTX 4090 and judged them on the DFL
+validation match J03WR9, with true dead balls. Trial 401 is submitted. Trial 402 came closest, but it missed the bar we
+set before training it: +0.02 spellF1 over 401 with no loss of macroF1.
+
+| Trial | Training data | Training | J03WR9 spellF1 | J03WR9 macroF1 |
+| --- | --- | --- | --- | --- |
+| 401 (submitted) | 6 DFL matches | 50 epochs, batch 32 | 0.707 | 0.954 |
+| 402 | 6 DFL + 63 PFF matches, PFF labels from our DFL-trained teacher | 30 epochs, batch 64 | 0.715 | 0.948 |
+| 400 | 6 DFL + 63 PFF matches, PFF labels from our event rule | 15 epochs, batch 64 | 0.683 | 0.947 |
+| Authors' checkpoint, for reference | 5 DFL matches | 50 epochs, batch 32 | 0.727 | 0.949 |
+
+J03WR9 also picked the checkpoint of each of our trials, so our three numbers are optimistic by a similar margin; the
+authors' model never saw it. The public 5 minutes were never used to choose.
 
 **How much is left.** The DFL folds put the ceiling for better dead balls at about +0.026 spellF1, and for a perfect
 team call at +0.315. PathCRF trained and ran on clean DFL player tracks, so the 0.602 is likely optimistic for this
@@ -186,8 +201,8 @@ folds (`eda/qa.py`) and watched clips of each type.
 **With more time we would:**
 
 1. Run PathCRF on short live stretches by padding them to its window.
-2. Retrain PathCRF on DFL plus PFF at full length, with PFF labels from our DFL-trained teacher and DFL oversampled 4×
-   (trial 402, set up but not adopted).
+2. Train the DFL plus PFF PathCRF at the authors' full length (50 epochs, batch 32). At 30 epochs, trial 402 already
+   edged past 401 on spellF1 (0.715 against 0.707).
 3. Add a better ball. Our simulation puts a detector that fills half of the hidden frames, with 2% gross errors, at
    +0.02 spellF1.
 4. Degrade DFL player tracks to this match's slot and identity quality when training PathCRF.
@@ -221,7 +236,8 @@ python evaluation/validate_submission.py evaluation/results/pathcrf.csv
 
 **Retraining** needs the DFL open data (`dfl-cache` in the container downloads 2.4 GB). The BiGRU retrains with
 `src/seq.py --train` in about 25 minutes on a laptop. PathCRF trains with `pod/vast.sh` on one RTX 4090; the 7 folds,
-the PFF ablation and the final models took about 85 GPU-hours. Every training log is in `pod/logs/`.
+the PFF ablation and trials 400 and 401 took about 85 GPU-hours, and trial 402 was a separate run. Their training logs
+are in `pod/logs/`.
 
 ## Team
 
