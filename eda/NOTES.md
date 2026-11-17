@@ -2,9 +2,9 @@
 
 ## Reproduce PathCRF on BAR-ATH (any teammate, ~10 min + weights download)
 ```bash
-pip install -r requirements.txt            # this repo's .venv, data/ unpacked as in README
+bash pod/venv_setup.sh                     # .venv pinned as in docker/ + PathCRF code in ~/pathcrf (or use the container, docker/README.md); data/ unpacked as in README
 gh auth login                              # needs access to the team repo (weights live in its GitHub release `pathcrf-weights`)
-bash pod/pathcrf_setup.sh                  # clones+patches PathCRF into ~/pathcrf, venv, weights, BAR-ATH parquet, inference
+bash pod/pathcrf_setup.sh                  # weights, BAR-ATH parquet, inference, blend
 ```
 Writes `evaluation/results/pathcrf.csv` (PathCRF home/away on alive frames, dead balls from our BiGRU; since 2026-11-04 the
 team call is the soft blend `src/seq.py --blend`, PathCRF vote w=4, see "BiGRU and the PathCRF team blend") and prints the
@@ -405,6 +405,24 @@ final `pathcrf.csv` are byte-identical to the same steps run earlier in `/worksp
 too. So the Docker path is deterministic. Still unchecked: the 401 weights through it, the weights download, and whether
 the laptop-made 401 CSV equals the container's (container and laptop PathCRF differ, see above): regenerate the
 submitted CSV in the container so the documented steps reproduce it.
+**Submission CSV rebuilt in the container with 401 (2026-11-17).** Weights from the `pathcrf-weights` release (`401.tgz`,
+Eli's Oct 29 tarball, md5 b781d647e0c6fe257d7f130d09faa30c; backed up to `s3://more-than-a-hack-2027/derived/pathcrf/401.tgz`).
+In the container 401 scores J03WR9 **0.707 / 0.954**, exactly the laptop's, so the model is right. `bash pod/pathcrf_setup.sh`
+(default trial 401) then writes `evaluation/results/pathcrf.csv`: valid, 455 possessions; public window (sanity only)
+**0.610 / 0.880, 25 spells**, vs the laptop file's 0.660 / 0.884 (23). Same weights and same DFL score, so the BAR-ATH gap
+comes from the inputs built in each environment, not from PathCRF; within the window's +-0.05 noise either way. The
+container file is the submission (`submission/JustSomeGuys.csv`, md5 6f394376f6744e6998c6cb1713012c16) because it is the one
+the documented Docker steps reproduce; the tech doc quotes its numbers. The soft vote changes 1.4% of PathCRF's calls.
+**Without Docker: `pod/venv_setup.sh` (2026-11-17).** Builds the image's environment as one virtualenv in `.venv` (Python 3.11,
+torch 2.5.1 from the CPU index, then `requirements-model.txt` + `docker/requirements-docker.txt` + PathCRF's requirements in one
+resolve, `pip check`), clones + patches PathCRF into `~/pathcrf` and links `~/pathcrf/.venv` to `.venv`, so
+`pod/pathcrf_setup.sh` runs unchanged; that script no longer makes its own unpinned venv and stops with a pointer instead.
+Checked from a clean clone on an M-series Mac (Homebrew Python 3.11.14, throwaway HOME, 401 weights from `401.tgz`): install
+24 min (1.2 GB of wheels), pipeline 8 min, and the final `pathcrf.csv` is **byte-identical to `submission/JustSomeGuys.csv`**.
+`seq.csv` and the PathCRF team calls are byte-identical too; `seq_barath_logp.npy` differs by at most 6.4e-6 and
+`BARATH.parquet` by 1.9e-13, with no label changed. So the old laptop file's different numbers came from that laptop's
+unpinned environment, not from macOS.
+
 
 ## PathCRF own training on vast.ai (RTX 4090, `pod/vast.sh`, queue in `~/pathcrf/queue.sh` on the box; 2026-10-28)
 Fold 0 (trial 200, DFL-only, held-out J03WMX, 30 epochs x 8.1 min, best val acc at epoch ~12) scored with

@@ -20,7 +20,7 @@ submitted model on our validation match but missed the bar we set in advance, so
 model.
 
 No labels of BAR–ATH, hand-made or otherwise, are used anywhere, and no choice was tuned on the public 5 minutes. As a
-sanity check only, the file scores 0.66 / 0.89 there, against 0.33 / 0.62 for the organisers' baseline.
+sanity check only, the file scores 0.61 / 0.88 there, against 0.33 / 0.62 for the organisers' baseline.
 
 ## Approach
 
@@ -48,7 +48,7 @@ flowchart TD
 ```
 
 Dead balls come only from the BiGRU. On live frames PathCRF's team is a strong vote, which a confident BiGRU overrules
-on 1.3% of the frames PathCRF covers. `pod/pathcrf_setup.sh` runs these stages in order.
+on 1.4% of the frames PathCRF covers. `pod/pathcrf_setup.sh` runs these stages in order.
 
 **Design choices, and the evidence for each.** Every choice below was made by leave-one-match-out cross-validation on
 7 public Bundesliga (DFL) matches, never on this game.
@@ -158,7 +158,7 @@ BAR–ATH, cost 0.001.
 | --- | --- | --- | --- |
 | DFL, 7 folds, mean | 0.602 | 0.891 | Held out: each match scored by models trained on the other 6. Our yardstick for every decision |
 | DFL validation match J03WR9, submitted PathCRF | 0.707 | 0.954 | True dead balls. Optimistic: this match also picked the checkpoint |
-| BAR–ATH public 5 minutes | 0.660 | 0.886 | Sanity check only, 17 possessions (organisers' baseline: 0.326 / 0.621) |
+| BAR–ATH public 5 minutes | 0.610 | 0.880 | Sanity check only, 17 possessions (organisers' baseline: 0.326 / 0.621) |
 
 **Choosing the PathCRF model.** We trained three final candidates on a rented RTX 4090 and judged them on the DFL
 validation match J03WR9, with true dead balls. Trial 401 is submitted. Trial 402 came closest, but it missed the bar we
@@ -214,7 +214,7 @@ One script regenerates the submitted CSV from a clean clone and the data bundle,
 image is built. The BiGRU weights are in the repository. PathCRF's code is fetched at a pinned commit (`1b7c6f8`) and
 patched (`pod/pathcrf.patch`), and our trained PathCRF weights download from the repository's release.
 
-The environment is the Docker image in `docker/`: Python 3.11.11, torch 2.5.1 (CPU), numpy 1.26.4, pandas 2.2.3,
+The reference environment is the Docker image in `docker/`: Python 3.11.11, torch 2.5.1 (CPU), numpy 1.26.4, pandas 2.2.3,
 scikit-learn 1.5.2, pyarrow 17.0.0 and torch_geometric 2.6.1.
 
 ```bash
@@ -227,7 +227,24 @@ python evaluation/validate_submission.py evaluation/results/pathcrf.csv
 
 `evaluation/results/pathcrf.csv` is the file we submitted under our team name.
 
-| Step in `pod/pathcrf_setup.sh` | Command | CPU time |
+**Without Docker.** `pod/venv_setup.sh` builds the same environment as a virtualenv in `.venv`, with the same pinned
+versions and CPU torch, and fetches PathCRF's code into `~/pathcrf`. It needs Python 3.11 and git, on macOS or Linux (on
+Windows, use WSL).
+
+```bash
+git clone <public repo URL> mtah && cd mtah
+# unpack the data bundle into data/, as in README.md
+bash pod/venv_setup.sh        # or: PYTHON=/path/to/python3.11 bash pod/venv_setup.sh
+bash pod/pathcrf_setup.sh
+.venv/bin/python evaluation/validate_submission.py evaluation/results/pathcrf.csv
+```
+
+We ran this from a clean clone on an Apple Silicon Mac (Python 3.11.14). The final CSV is byte-identical to the one the
+container makes, which is the file we submitted. Intermediate float files differ only in the last digits (at most 6e-6 in
+the BiGRU log-probabilities), and no frame's label changes. Installing takes about 25 minutes, mostly a 1.2 GB download;
+the pipeline then runs in about 8 minutes.
+
+| Step in `pod/pathcrf_setup.sh` | Command | CPU time in the container |
 | --- | --- | --- |
 | BiGRU dead balls and log-probabilities | `src/seq.py` | about 14 min |
 | Stitch tracks, cut live episodes | `src/pathcrf_io.py` | 5 s |
